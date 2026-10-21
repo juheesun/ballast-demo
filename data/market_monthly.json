@@ -1,0 +1,387 @@
+[
+  {
+    "year_month": "2025-01",
+    "usd_krw": 1449.3262,
+    "newbuild_13k_usd_mn": 172.0,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2025-02",
+    "usd_krw": 1445.845,
+    "newbuild_13k_usd_mn": 172.0,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2025-03",
+    "usd_krw": 1457.5952,
+    "newbuild_13k_usd_mn": 172.0,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2025-04",
+    "usd_krw": 1442.3273,
+    "newbuild_13k_usd_mn": 172.0,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2025-05",
+    "usd_krw": 1396.5545,
+    "newbuild_13k_usd_mn": 172.0,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2025-06",
+    "usd_krw": 1365.9905,
+    "newbuild_13k_usd_mn": 172.0,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2025-07",
+    "usd_krw": 1376.8217,
+    "newbuild_13k_usd_mn": 172.0,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2025-08",
+    "usd_krw": 1389.1762,
+    "newbuild_13k_usd_mn": 172.0,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2025-09",
+    "usd_krw": 1392.5318,
+    "newbuild_13k_usd_mn": 172.0,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2025-10",
+    "usd_krw": 1419.7435,
+    "newbuild_13k_usd_mn": 172.0,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2025-11",
+    "usd_krw": 1459.695,
+    "newbuild_13k_usd_mn": 172.0,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2025-12",
+    "usd_krw": 1465.7565,
+    "newbuild_13k_usd_mn": 172.0,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2026-01",
+    "usd_krw": 1455.6091,
+    "newbuild_13k_usd_mn": 171.5,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.container_orders_year (직전 값 이월)",
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2026-02",
+    "usd_krw": 1448.325,
+    "newbuild_13k_usd_mn": 171.5,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.container_orders_year (직전 값 이월)",
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2026-03",
+    "usd_krw": 1488.6318,
+    "newbuild_13k_usd_mn": 171.5,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.container_orders_year (직전 값 이월)",
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2026-04",
+    "usd_krw": 1485.3136,
+    "newbuild_13k_usd_mn": 171.5,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.container_orders_year (직전 값 이월)",
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2026-05",
+    "usd_krw": 1490.9,
+    "newbuild_13k_usd_mn": 171.5,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.container_orders_year (직전 값 이월)",
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2026-06",
+    "usd_krw": 1528.8227,
+    "newbuild_13k_usd_mn": 171.5,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.container_orders_year (직전 값 이월)",
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2026-07",
+    "usd_krw": 1491.8652,
+    "newbuild_13k_usd_mn": 171.5,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.container_orders_year (직전 값 이월)",
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2026-08",
+    "usd_krw": 1403.8667,
+    "newbuild_13k_usd_mn": 171.5,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.container_orders_year (직전 값 이월)",
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2026-09",
+    "usd_krw": 1357.5455,
+    "newbuild_13k_usd_mn": 171.5,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.container_orders_year (직전 값 이월)",
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  },
+  {
+    "year_month": "2026-10",
+    "usd_krw": 1357.5455,
+    "newbuild_13k_usd_mn": 171.5,
+    "steel_plate_krw_ton": 900000.0,
+    "yard_backlog_years": 2.9,
+    "kr_share": 0.2032,
+    "container_orders_year": 644.0,
+    "secondhand_index": 82.6,
+    "assumed_fields": [
+      "market.usd_krw (직전 값 이월)",
+      "market.container_orders_year (직전 값 이월)",
+      "market.steel_plate_krw_ton (기본값)",
+      "market.yard_backlog_years (기본값: 한국 전체 수주잔고)",
+      "market.kr_share (연간 값을 매월 반복)",
+      "market.container_orders_year (연간 값을 매월 반복)",
+      "market.secondhand_index (연간 값을 매월 반복)"
+    ]
+  }
+]

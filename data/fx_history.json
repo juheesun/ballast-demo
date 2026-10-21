@@ -1,0 +1,954 @@
+{
+  "monthly": [
+    {
+      "year_month": "2010-01",
+      "usd_krw": 1138.7524
+    },
+    {
+      "year_month": "2010-02",
+      "usd_krw": 1154.155
+    },
+    {
+      "year_month": "2010-03",
+      "usd_krw": 1135.9461
+    },
+    {
+      "year_month": "2010-04",
+      "usd_krw": 1115.4159
+    },
+    {
+      "year_month": "2010-05",
+      "usd_krw": 1166.9186
+    },
+    {
+      "year_month": "2010-06",
+      "usd_krw": 1214.0182
+    },
+    {
+      "year_month": "2010-07",
+      "usd_krw": 1204.4455
+    },
+    {
+      "year_month": "2010-08",
+      "usd_krw": 1179.4591
+    },
+    {
+      "year_month": "2010-09",
+      "usd_krw": 1160.0636
+    },
+    {
+      "year_month": "2010-10",
+      "usd_krw": 1121.4976
+    },
+    {
+      "year_month": "2010-11",
+      "usd_krw": 1129.3641
+    },
+    {
+      "year_month": "2010-12",
+      "usd_krw": 1145.1391
+    },
+    {
+      "year_month": "2011-01",
+      "usd_krw": 1118.6405
+    },
+    {
+      "year_month": "2011-02",
+      "usd_krw": 1117.6625
+    },
+    {
+      "year_month": "2011-03",
+      "usd_krw": 1118.9217
+    },
+    {
+      "year_month": "2011-04",
+      "usd_krw": 1083.0333
+    },
+    {
+      "year_month": "2011-05",
+      "usd_krw": 1084.1636
+    },
+    {
+      "year_month": "2011-06",
+      "usd_krw": 1079.8455
+    },
+    {
+      "year_month": "2011-07",
+      "usd_krw": 1057.6286
+    },
+    {
+      "year_month": "2011-08",
+      "usd_krw": 1074.15
+    },
+    {
+      "year_month": "2011-09",
+      "usd_krw": 1119.3682
+    },
+    {
+      "year_month": "2011-10",
+      "usd_krw": 1151.469
+    },
+    {
+      "year_month": "2011-11",
+      "usd_krw": 1134.0591
+    },
+    {
+      "year_month": "2011-12",
+      "usd_krw": 1148.6864
+    },
+    {
+      "year_month": "2012-01",
+      "usd_krw": 1141.6295
+    },
+    {
+      "year_month": "2012-02",
+      "usd_krw": 1122.4524
+    },
+    {
+      "year_month": "2012-03",
+      "usd_krw": 1126.1773
+    },
+    {
+      "year_month": "2012-04",
+      "usd_krw": 1134.9476
+    },
+    {
+      "year_month": "2012-05",
+      "usd_krw": 1157.6291
+    },
+    {
+      "year_month": "2012-06",
+      "usd_krw": 1163.6086
+    },
+    {
+      "year_month": "2012-07",
+      "usd_krw": 1141.8427
+    },
+    {
+      "year_month": "2012-08",
+      "usd_krw": 1131.7457
+    },
+    {
+      "year_month": "2012-09",
+      "usd_krw": 1123.3885
+    },
+    {
+      "year_month": "2012-10",
+      "usd_krw": 1105.6587
+    },
+    {
+      "year_month": "2012-11",
+      "usd_krw": 1087.0014
+    },
+    {
+      "year_month": "2012-12",
+      "usd_krw": 1075.1367
+    },
+    {
+      "year_month": "2013-01",
+      "usd_krw": 1066.3543
+    },
+    {
+      "year_month": "2013-02",
+      "usd_krw": 1087.0855
+    },
+    {
+      "year_month": "2013-03",
+      "usd_krw": 1102.8381
+    },
+    {
+      "year_month": "2013-04",
+      "usd_krw": 1120.9309
+    },
+    {
+      "year_month": "2013-05",
+      "usd_krw": 1112.4124
+    },
+    {
+      "year_month": "2013-06",
+      "usd_krw": 1135.345
+    },
+    {
+      "year_month": "2013-07",
+      "usd_krw": 1126.113
+    },
+    {
+      "year_month": "2013-08",
+      "usd_krw": 1116.3636
+    },
+    {
+      "year_month": "2013-09",
+      "usd_krw": 1085.4048
+    },
+    {
+      "year_month": "2013-10",
+      "usd_krw": 1066.7652
+    },
+    {
+      "year_month": "2013-11",
+      "usd_krw": 1062.7762
+    },
+    {
+      "year_month": "2013-12",
+      "usd_krw": 1056.7182
+    },
+    {
+      "year_month": "2014-01",
+      "usd_krw": 1065.5783
+    },
+    {
+      "year_month": "2014-02",
+      "usd_krw": 1071.055
+    },
+    {
+      "year_month": "2014-03",
+      "usd_krw": 1070.881
+    },
+    {
+      "year_month": "2014-04",
+      "usd_krw": 1043.0136
+    },
+    {
+      "year_month": "2014-05",
+      "usd_krw": 1025.3455
+    },
+    {
+      "year_month": "2014-06",
+      "usd_krw": 1019.3524
+    },
+    {
+      "year_month": "2014-07",
+      "usd_krw": 1020.5391
+    },
+    {
+      "year_month": "2014-08",
+      "usd_krw": 1024.6333
+    },
+    {
+      "year_month": "2014-09",
+      "usd_krw": 1033.8727
+    },
+    {
+      "year_month": "2014-10",
+      "usd_krw": 1061.0174
+    },
+    {
+      "year_month": "2014-11",
+      "usd_krw": 1097.41
+    },
+    {
+      "year_month": "2014-12",
+      "usd_krw": 1104.0739
+    },
+    {
+      "year_month": "2015-01",
+      "usd_krw": 1089.1818
+    },
+    {
+      "year_month": "2015-02",
+      "usd_krw": 1099.015
+    },
+    {
+      "year_month": "2015-03",
+      "usd_krw": 1113.4182
+    },
+    {
+      "year_month": "2015-04",
+      "usd_krw": 1087.1136
+    },
+    {
+      "year_month": "2015-05",
+      "usd_krw": 1091.5143
+    },
+    {
+      "year_month": "2015-06",
+      "usd_krw": 1112.6818
+    },
+    {
+      "year_month": "2015-07",
+      "usd_krw": 1145.2783
+    },
+    {
+      "year_month": "2015-08",
+      "usd_krw": 1179.5143
+    },
+    {
+      "year_month": "2015-09",
+      "usd_krw": 1185.9773
+    },
+    {
+      "year_month": "2015-10",
+      "usd_krw": 1146.3364
+    },
+    {
+      "year_month": "2015-11",
+      "usd_krw": 1152.8762
+    },
+    {
+      "year_month": "2015-12",
+      "usd_krw": 1172.8043
+    },
+    {
+      "year_month": "2016-01",
+      "usd_krw": 1201.881
+    },
+    {
+      "year_month": "2016-02",
+      "usd_krw": 1215.8238
+    },
+    {
+      "year_month": "2016-03",
+      "usd_krw": 1186.313
+    },
+    {
+      "year_month": "2016-04",
+      "usd_krw": 1147.0714
+    },
+    {
+      "year_month": "2016-05",
+      "usd_krw": 1172.2545
+    },
+    {
+      "year_month": "2016-06",
+      "usd_krw": 1169.5091
+    },
+    {
+      "year_month": "2016-07",
+      "usd_krw": 1142.6524
+    },
+    {
+      "year_month": "2016-08",
+      "usd_krw": 1111.1087
+    },
+    {
+      "year_month": "2016-09",
+      "usd_krw": 1107.4455
+    },
+    {
+      "year_month": "2016-10",
+      "usd_krw": 1126.1952
+    },
+    {
+      "year_month": "2016-11",
+      "usd_krw": 1162.7
+    },
+    {
+      "year_month": "2016-12",
+      "usd_krw": 1184.1182
+    },
+    {
+      "year_month": "2017-01",
+      "usd_krw": 1180.6591
+    },
+    {
+      "year_month": "2017-02",
+      "usd_krw": 1143.26
+    },
+    {
+      "year_month": "2017-03",
+      "usd_krw": 1134.0957
+    },
+    {
+      "year_month": "2017-04",
+      "usd_krw": 1133.43
+    },
+    {
+      "year_month": "2017-05",
+      "usd_krw": 1125.9696
+    },
+    {
+      "year_month": "2017-06",
+      "usd_krw": 1130.5182
+    },
+    {
+      "year_month": "2017-07",
+      "usd_krw": 1133.3524
+    },
+    {
+      "year_month": "2017-08",
+      "usd_krw": 1131.2783
+    },
+    {
+      "year_month": "2017-09",
+      "usd_krw": 1132.5381
+    },
+    {
+      "year_month": "2017-10",
+      "usd_krw": 1134.3091
+    },
+    {
+      "year_month": "2017-11",
+      "usd_krw": 1103.4
+    },
+    {
+      "year_month": "2017-12",
+      "usd_krw": 1084.8095
+    },
+    {
+      "year_month": "2018-01",
+      "usd_krw": 1066.887
+    },
+    {
+      "year_month": "2018-02",
+      "usd_krw": 1080.16
+    },
+    {
+      "year_month": "2018-03",
+      "usd_krw": 1071.5455
+    },
+    {
+      "year_month": "2018-04",
+      "usd_krw": 1067.9048
+    },
+    {
+      "year_month": "2018-05",
+      "usd_krw": 1076.7261
+    },
+    {
+      "year_month": "2018-06",
+      "usd_krw": 1092.7952
+    },
+    {
+      "year_month": "2018-07",
+      "usd_krw": 1122.8318
+    },
+    {
+      "year_month": "2018-08",
+      "usd_krw": 1121.4261
+    },
+    {
+      "year_month": "2018-09",
+      "usd_krw": 1119.845
+    },
+    {
+      "year_month": "2018-10",
+      "usd_krw": 1131.487
+    },
+    {
+      "year_month": "2018-11",
+      "usd_krw": 1127.7227
+    },
+    {
+      "year_month": "2018-12",
+      "usd_krw": 1122.9
+    },
+    {
+      "year_month": "2019-01",
+      "usd_krw": 1121.5478
+    },
+    {
+      "year_month": "2019-02",
+      "usd_krw": 1122.015
+    },
+    {
+      "year_month": "2019-03",
+      "usd_krw": 1130.9762
+    },
+    {
+      "year_month": "2019-04",
+      "usd_krw": 1142.2091
+    },
+    {
+      "year_month": "2019-05",
+      "usd_krw": 1183.0304
+    },
+    {
+      "year_month": "2019-06",
+      "usd_krw": 1174.085
+    },
+    {
+      "year_month": "2019-07",
+      "usd_krw": 1176.4174
+    },
+    {
+      "year_month": "2019-08",
+      "usd_krw": 1210.3591
+    },
+    {
+      "year_month": "2019-09",
+      "usd_krw": 1196.4667
+    },
+    {
+      "year_month": "2019-10",
+      "usd_krw": 1183.813
+    },
+    {
+      "year_month": "2019-11",
+      "usd_krw": 1168.3381
+    },
+    {
+      "year_month": "2019-12",
+      "usd_krw": 1174.2682
+    },
+    {
+      "year_month": "2020-01",
+      "usd_krw": 1165.5522
+    },
+    {
+      "year_month": "2020-02",
+      "usd_krw": 1195.165
+    },
+    {
+      "year_month": "2020-03",
+      "usd_krw": 1220.3
+    },
+    {
+      "year_month": "2020-04",
+      "usd_krw": 1224.4636
+    },
+    {
+      "year_month": "2020-05",
+      "usd_krw": 1229.0571
+    },
+    {
+      "year_month": "2020-06",
+      "usd_krw": 1208.2318
+    },
+    {
+      "year_month": "2020-07",
+      "usd_krw": 1198.4913
+    },
+    {
+      "year_month": "2020-08",
+      "usd_krw": 1186.519
+    },
+    {
+      "year_month": "2020-09",
+      "usd_krw": 1177.75
+    },
+    {
+      "year_month": "2020-10",
+      "usd_krw": 1145.6864
+    },
+    {
+      "year_month": "2020-11",
+      "usd_krw": 1115.5476
+    },
+    {
+      "year_month": "2020-12",
+      "usd_krw": 1094.7696
+    },
+    {
+      "year_month": "2021-01",
+      "usd_krw": 1098.4286
+    },
+    {
+      "year_month": "2021-02",
+      "usd_krw": 1111.785
+    },
+    {
+      "year_month": "2021-03",
+      "usd_krw": 1131.087
+    },
+    {
+      "year_month": "2021-04",
+      "usd_krw": 1118.3591
+    },
+    {
+      "year_month": "2021-05",
+      "usd_krw": 1123.8333
+    },
+    {
+      "year_month": "2021-06",
+      "usd_krw": 1122.0227
+    },
+    {
+      "year_month": "2021-07",
+      "usd_krw": 1144.8
+    },
+    {
+      "year_month": "2021-08",
+      "usd_krw": 1161.3727
+    },
+    {
+      "year_month": "2021-09",
+      "usd_krw": 1171.6591
+    },
+    {
+      "year_month": "2021-10",
+      "usd_krw": 1182.7905
+    },
+    {
+      "year_month": "2021-11",
+      "usd_krw": 1183.7318
+    },
+    {
+      "year_month": "2021-12",
+      "usd_krw": 1183.6043
+    },
+    {
+      "year_month": "2022-01",
+      "usd_krw": 1195.5238
+    },
+    {
+      "year_month": "2022-02",
+      "usd_krw": 1199.07
+    },
+    {
+      "year_month": "2022-03",
+      "usd_krw": 1221.1652
+    },
+    {
+      "year_month": "2022-04",
+      "usd_krw": 1234.9429
+    },
+    {
+      "year_month": "2022-05",
+      "usd_krw": 1268.2864
+    },
+    {
+      "year_month": "2022-06",
+      "usd_krw": 1276.7182
+    },
+    {
+      "year_month": "2022-07",
+      "usd_krw": 1307.3381
+    },
+    {
+      "year_month": "2022-08",
+      "usd_krw": 1319.7957
+    },
+    {
+      "year_month": "2022-09",
+      "usd_krw": 1394.6
+    },
+    {
+      "year_month": "2022-10",
+      "usd_krw": 1425.6667
+    },
+    {
+      "year_month": "2022-11",
+      "usd_krw": 1359.9773
+    },
+    {
+      "year_month": "2022-12",
+      "usd_krw": 1293.8182
+    },
+    {
+      "year_month": "2023-01",
+      "usd_krw": 1244.4227
+    },
+    {
+      "year_month": "2023-02",
+      "usd_krw": 1275.16
+    },
+    {
+      "year_month": "2023-03",
+      "usd_krw": 1305.2783
+    },
+    {
+      "year_month": "2023-04",
+      "usd_krw": 1322.19
+    },
+    {
+      "year_month": "2023-05",
+      "usd_krw": 1327.6913
+    },
+    {
+      "year_month": "2023-06",
+      "usd_krw": 1297.1409
+    },
+    {
+      "year_month": "2023-07",
+      "usd_krw": 1284.1333
+    },
+    {
+      "year_month": "2023-08",
+      "usd_krw": 1321.1391
+    },
+    {
+      "year_month": "2023-09",
+      "usd_krw": 1332.9333
+    },
+    {
+      "year_month": "2023-10",
+      "usd_krw": 1350.5636
+    },
+    {
+      "year_month": "2023-11",
+      "usd_krw": 1307.7
+    },
+    {
+      "year_month": "2023-12",
+      "usd_krw": 1303.7762
+    },
+    {
+      "year_month": "2024-01",
+      "usd_krw": 1324.0
+    },
+    {
+      "year_month": "2024-02",
+      "usd_krw": 1331.3333
+    },
+    {
+      "year_month": "2024-03",
+      "usd_krw": 1331.4905
+    },
+    {
+      "year_month": "2024-04",
+      "usd_krw": 1368.6091
+    },
+    {
+      "year_month": "2024-05",
+      "usd_krw": 1366.2435
+    },
+    {
+      "year_month": "2024-06",
+      "usd_krw": 1379.74
+    },
+    {
+      "year_month": "2024-07",
+      "usd_krw": 1383.2826
+    },
+    {
+      "year_month": "2024-08",
+      "usd_krw": 1352.4182
+    },
+    {
+      "year_month": "2024-09",
+      "usd_krw": 1332.9429
+    },
+    {
+      "year_month": "2024-10",
+      "usd_krw": 1359.4435
+    },
+    {
+      "year_month": "2024-11",
+      "usd_krw": 1394.1286
+    },
+    {
+      "year_month": "2024-12",
+      "usd_krw": 1438.7
+    },
+    {
+      "year_month": "2025-01",
+      "usd_krw": 1449.3262
+    },
+    {
+      "year_month": "2025-02",
+      "usd_krw": 1445.845
+    },
+    {
+      "year_month": "2025-03",
+      "usd_krw": 1457.5952
+    },
+    {
+      "year_month": "2025-04",
+      "usd_krw": 1442.3273
+    },
+    {
+      "year_month": "2025-05",
+      "usd_krw": 1396.5545
+    },
+    {
+      "year_month": "2025-06",
+      "usd_krw": 1365.9905
+    },
+    {
+      "year_month": "2025-07",
+      "usd_krw": 1376.8217
+    },
+    {
+      "year_month": "2025-08",
+      "usd_krw": 1389.1762
+    },
+    {
+      "year_month": "2025-09",
+      "usd_krw": 1392.5318
+    },
+    {
+      "year_month": "2025-10",
+      "usd_krw": 1419.7435
+    },
+    {
+      "year_month": "2025-11",
+      "usd_krw": 1459.695
+    },
+    {
+      "year_month": "2025-12",
+      "usd_krw": 1465.7565
+    },
+    {
+      "year_month": "2026-01",
+      "usd_krw": 1455.6091
+    },
+    {
+      "year_month": "2026-02",
+      "usd_krw": 1448.325
+    },
+    {
+      "year_month": "2026-03",
+      "usd_krw": 1488.6318
+    },
+    {
+      "year_month": "2026-04",
+      "usd_krw": 1485.3136
+    },
+    {
+      "year_month": "2026-05",
+      "usd_krw": 1490.9
+    },
+    {
+      "year_month": "2026-06",
+      "usd_krw": 1528.8227
+    },
+    {
+      "year_month": "2026-07",
+      "usd_krw": 1491.8652
+    },
+    {
+      "year_month": "2026-08",
+      "usd_krw": 1403.8667
+    },
+    {
+      "year_month": "2026-09",
+      "usd_krw": 1357.5455
+    }
+  ],
+  "annual": [
+    {
+      "year": 1990,
+      "usd_krw": 707.9951
+    },
+    {
+      "year": 1991,
+      "usd_krw": 733.2293
+    },
+    {
+      "year": 1992,
+      "usd_krw": 780.0123
+    },
+    {
+      "year": 1993,
+      "usd_krw": 802.4361
+    },
+    {
+      "year": 1994,
+      "usd_krw": 804.2683
+    },
+    {
+      "year": 1995,
+      "usd_krw": 771.398
+    },
+    {
+      "year": 1996,
+      "usd_krw": 804.4202
+    },
+    {
+      "year": 1997,
+      "usd_krw": 950.5074
+    },
+    {
+      "year": 1998,
+      "usd_krw": 1400.477
+    },
+    {
+      "year": 1999,
+      "usd_krw": 1186.7058
+    },
+    {
+      "year": 2000,
+      "usd_krw": 1130.6398
+    },
+    {
+      "year": 2001,
+      "usd_krw": 1290.4096
+    },
+    {
+      "year": 2002,
+      "usd_krw": 1251.0451
+    },
+    {
+      "year": 2003,
+      "usd_krw": 1190.9587
+    },
+    {
+      "year": 2004,
+      "usd_krw": 1145.1965
+    },
+    {
+      "year": 2005,
+      "usd_krw": 1024.2257
+    },
+    {
+      "year": 2006,
+      "usd_krw": 954.748
+    },
+    {
+      "year": 2007,
+      "usd_krw": 929.4504
+    },
+    {
+      "year": 2008,
+      "usd_krw": 1100.8618
+    },
+    {
+      "year": 2009,
+      "usd_krw": 1274.9468
+    },
+    {
+      "year": 2010,
+      "usd_krw": 1155.4313
+    },
+    {
+      "year": 2011,
+      "usd_krw": 1107.3024
+    },
+    {
+      "year": 2012,
+      "usd_krw": 1125.9348
+    },
+    {
+      "year": 2013,
+      "usd_krw": 1094.9256
+    },
+    {
+      "year": 2014,
+      "usd_krw": 1053.0643
+    },
+    {
+      "year": 2015,
+      "usd_krw": 1131.3093
+    },
+    {
+      "year": 2016,
+      "usd_krw": 1160.5894
+    },
+    {
+      "year": 2017,
+      "usd_krw": 1130.635
+    },
+    {
+      "year": 2018,
+      "usd_krw": 1100.1859
+    },
+    {
+      "year": 2019,
+      "usd_krw": 1165.2938
+    },
+    {
+      "year": 2020,
+      "usd_krw": 1180.1278
+    },
+    {
+      "year": 2021,
+      "usd_krw": 1144.4562
+    },
+    {
+      "year": 2022,
+      "usd_krw": 1291.4085
+    },
+    {
+      "year": 2023,
+      "usd_krw": 1306.0107
+    },
+    {
+      "year": 2024,
+      "usd_krw": 1363.5277
+    },
+    {
+      "year": 2025,
+      "usd_krw": 1421.7803
+    }
+  ]
+}
