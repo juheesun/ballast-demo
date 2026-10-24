@@ -7,6 +7,7 @@ import BidBar from '../components/BidBar.jsx'
 import StatStrip from '../components/Stat.jsx'
 import Figure from '../components/Figure.jsx'
 import { EvChart } from '../components/charts.jsx'
+import MarginPathChart from '../components/MarginPathChart.jsx'
 
 // MVP2 · 반사실 시나리오. 왼쪽: 질문(문장)이나 버튼으로 조건을 바꾼다 / 오른쪽: 결과가 기준 조건과 겹쳐 바뀐다.
 const ZERO = { comp_pct: 0, steel_pct: 0, fx_pct: 0, fx_krw: null, delay_months: 0, quote_pct: 0 }
@@ -52,6 +53,7 @@ export default function ScenarioPage() {
 
   const table = useAsync(() => (bidId ? api.scenarioTable(bidId) : Promise.resolve(null)), [bidId]).data
   const { data, error } = useAsync(() => (bidId ? api.compare(bidId, params) : Promise.resolve(null)), [bidId, JSON.stringify(params)], 120)
+  const path = useAsync(() => (bidId ? api.marginPath(bidId, params) : Promise.resolve(null)), [bidId, JSON.stringify(params)], 120).data
 
   // 입찰을 바꾸면 대화를 새로 시작한다
   useEffect(() => {
@@ -149,15 +151,31 @@ export default function ScenarioPage() {
             )
           })()}
 
+          {path && (() => {
+            const end = (x) => x.points[x.points.length - 1]
+            const b = end(path.base), s = end(path.scenario), moved = !atBase
+            const range = (e) => `${pct(e.p10, 1)} ~ ${pct(e.p90, 1)}`
+            return (
+              <Figure title="계약부터 인도까지 마진 범위" unit="마진 %"
+                note={`주황 띠는 환율·원가 시뮬레이션 10~90% 범위, 주황 선은 중앙값${moved ? ', 회색 점선은 기준 조건의 중앙값' : ''}입니다. 공정 이름은 납기를 4등분한 표시이고, 원가 초과는 건조가 진행되며 조금씩 반영된다고 가정했습니다.`}>
+                <MarginPathChart data={path} height={320} />
+                <p className="breakdown">
+                  인도 시점({path.scenario.months}개월) 마진 범위 <b>{range(s)}</b>, 적자 확률 <b>{pct(s.loss_prob, 0)}</b>
+                  {moved && <> (기준 {path.base.months}개월: {range(b)}, 적자 {pct(b.loss_prob, 0)})</>}
+                </p>
+              </Figure>
+            )
+          })()}
+
           {table && (
             <section className="card card-pad">
               <h2 className="card-title">시나리오 비교<span className="unit">행을 누르면 그 조건이 적용됩니다</span></h2>
               <table className="data">
-                <thead><tr><th>조건</th><th>낙찰확률</th><th>적자 확률</th><th>기대가치</th><th>변화</th><th>권장가</th></tr></thead>
+                <thead><tr><th>조건</th><th>낙찰확률</th><th>예상 마진</th><th>적자 확률</th><th>기대가치</th><th>변화</th><th>권장가</th></tr></thead>
                 <tbody>
                   {table.map((r) => (
                     <tr key={r.id} className={`row ${r.id === 'base' ? 'base' : ''} ${same(params, { ...ZERO, ...r.params }) ? 'on' : ''}`} onClick={() => setParams({ ...ZERO, ...r.params })}>
-                      <td>{r.label}</td><td>{pct(r.p_now, 0)}</td><td>{pct(r.loss_prob_now, 0)}</td>
+                      <td>{r.label}</td><td>{pct(r.p_now, 0)}</td><td className={r.margin_mean_now < 0 ? 'neg' : ''}>{pct(r.margin_mean_now, 1)}</td><td>{pct(r.loss_prob_now, 0)}</td>
                       <td>{r.ev_now.toFixed(1)}</td>
                       <td className={r.d_ev < 0 ? 'neg' : ''}>{r.id === 'base' ? '–' : signed(r.d_ev, 1)}</td>
                       <td>{r.recommended != null ? usd(r.recommended) : '–'}</td>

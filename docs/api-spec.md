@@ -74,3 +74,22 @@
 
 ### MVP3 공급사 평가
 현재는 서버 API 없이 브라우저(localStorage)에만 저장하는 화면이다. 점수 규칙(재무 40·평판 30·거래 30)은 임시이며 `frontend/src/pages/SuppliersPage.jsx` 의 `score()` 만 고치면 된다. 서버 저장이 필요하면 `GET/POST /api/suppliers` 를 추가한다.
+
+---
+## v0.3 추가 (MVP2 · 시나리오)
+
+### POST /api/scenario/margin-path
+계약부터 인도까지 달마다 마진 범위. 계산은 `backend/margin_path.py` (modeling/ 의 MarginModel 과 같은 난수라 마지막 달 값 = 카드의 예상 마진·적자 확률).
+요청: `/api/scenario/compare` 와 같음 → `{ "bid_id": "REAL-05", "scenario": { "fx_pct": -0.05 } }`
+응답: `{ source, bid_id, base, scenario, milestones }`
+- `base` / `scenario`: `{ quote, bep, months, points[] }`, `points[]` = `{ month, p10, p50, p90, mean, loss_prob }` (month 0 = 계약, months = 인도)
+- `milestones[]`: `{ month, label }` 계약·강재절단·탑재·진수·인도. 납기를 4등분한 화면용 표시이고 계산에는 쓰지 않는다.
+- 원가 초과는 `t / months` 만큼 반영 (인도 시점에 전부).
+
+### scenario-table 행에 `margin_mean_now` 추가
+`GET /api/bids/{id}/scenario-table` 각 행에 인도 시점 기대 마진(`margin_mean_now`)을 추가했다.
+
+### /api/chat 해석 규칙 확장
+- 환율: `달러`, `달러 값/가치`, `원화`(원화 강세 = 환율 하락으로 부호 반대), `강세/약세`, `절상/절하`
+- 숫자 없이 방향만 말하면 % 조건은 5%, 납기 지연은 3개월로 가정하고 `notes` 로 알린다.
+- 납기: `개월` 외에 `달`, `년` 단위도 읽는다.

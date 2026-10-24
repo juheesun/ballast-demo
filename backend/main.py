@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from .engine import Backend, PRESETS
 from .chat import answer
+from .margin_path import margin_path
 
 app = FastAPI(title="견적 리스크 매니저 API", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -64,6 +65,13 @@ def curve(bid_id: str, comp_pct: float = Query(0.0, ge=-0.5, le=0.5), steel_pct:
 def compare(body: CompareIn):
     _check(body.bid_id)
     return be.compare(body.bid_id, body.scenario.model_dump())
+
+
+@app.post("/api/scenario/margin-path")
+def scenario_margin_path(body: CompareIn):
+    """MVP2 · 계약~인도 달마다 마진 범위(10·50·90%)와 적자 확률. 기준 vs 시나리오. 계산은 backend/margin_path.py"""
+    _check(body.bid_id)
+    return margin_path(be, body.bid_id, body.scenario.model_dump())
 
 
 @app.get("/api/bids/{bid_id}/scenario-table")
