@@ -15,7 +15,7 @@ ZERO = {"comp_pct": 0.0, "steel_pct": 0.0, "fx_pct": 0.0, "fx_krw": None, "delay
 ANCHORS = [
     ("comp", r"경쟁(?:사|업체|자)?|중국(?:\s*조선소)?|타사|다른\s*조선소"),
     ("steel", r"후판(?:\s*가격|가)?|철강(?:가)?|강재(?:가)?|원자재"),
-    ("fx", r"환율|원\s*/\s*달러|달러\s*값"),
+    ("fx", r"환율|원\s*/?\s*달러|달러(?:\s*(?:값|가치))?"),
     ("delay", r"납기|인도\s*(?:시기|시점|일정)?|공기"),
     ("quote", r"(?:우리\s*|당사\s*)?(?:견적가?|제안가|입찰가|선가|가격)"),
 ]
@@ -33,6 +33,7 @@ RESET = re.compile(r"초기화|처음으로|리셋|기본\s*조건으로|원래�
 LABEL = {"comp_pct": "경쟁사 견적", "steel_pct": "후판가", "fx_pct": "환율", "quote_pct": "우리 견적가"}
 LIMITS = {"comp_pct": (-0.5, 0.5), "steel_pct": (-0.5, 1.0), "fx_pct": (-0.5, 0.5), "quote_pct": (-0.3, 0.3)}
 TOPIC_KEY = {"comp": "comp_pct", "steel": "steel_pct", "fx": "fx_pct", "quote": "quote_pct"}
+DEFAULT_PCT = 0.05  # 숫자 없이 "오르면/내리면"만 말했을 때 가정하는 폭
 
 
 def _sign(seg: str, num_end: int, explicit: str) -> int:
@@ -76,10 +77,18 @@ def parse(text: str) -> dict:
                 out["updates"]["fx_pct"] = 0.0
                 continue
         m = PCT.search(seg)
+        key = TOPIC_KEY[kind]
         if not m:
+            # 숫자 없이 방향만 말한 경우("달러 떨어지면?") → 기본 폭으로 가정하고 알려 준다
+            sg = _sign(seg, 0, "")
+            if sg == 0:
+                continue
+            out["updates"][key] = sg * DEFAULT_PCT
+            if key == "fx_pct":
+                out["updates"]["fx_krw"] = None
+            out["notes"].append(f"숫자가 없어서 {LABEL[key]} {sg * DEFAULT_PCT * 100:+.0f}%로 가정했어요. 다른 폭이 궁금하면 숫자를 같이 말해 주세요.")
             continue
         sg = _sign(seg, m.end(), m.group(1))
-        key = TOPIC_KEY[kind]
         if sg == 0:
             out["notes"].append(f"{LABEL[key]}가 올라가는지 내려가는지 알려 주세요. (예: {LABEL[key]} 5% 내리면)")
             continue
