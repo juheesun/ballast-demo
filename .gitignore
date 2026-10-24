@@ -15,3 +15,7 @@ venv/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# 웹 (React)
+node_modules/
+frontend/dist/
