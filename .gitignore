@@ -18,7 +18,6 @@ desktop.ini
 
 # 웹 (React)
 node_modules/
-frontend/dist/
 
 # 과거 이력 엑셀 업로드 저장 파일 (각자 컴퓨터에만 · MVP4)
 data/history.db

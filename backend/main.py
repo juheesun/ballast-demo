@@ -100,3 +100,22 @@ def chat(body: ChatIn):
 from .routers import history             # MVP4 과거 이력: dataset.json + 엑셀 업로드분(SQLite)
 history.be = be
 app.include_router(history.router)
+
+
+# ── 배포용: 빌드된 화면(frontend/dist)이 있으면 같은 서버가 함께 서비스한다 (링크 하나로 공유) ──
+# 개발 중에는 dist 가 없으므로 아무 일도 하지 않는다 (화면은 npm run dev 의 5173 포트).
+from pathlib import Path as _Path
+from fastapi import HTTPException as _HTTPException
+from fastapi.responses import FileResponse as _FileResponse
+from fastapi.staticfiles import StaticFiles as _StaticFiles
+
+_DIST = _Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if (_DIST / "index.html").exists():
+    app.mount("/assets", _StaticFiles(directory=_DIST / "assets"), name="assets")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def _spa(path: str):
+        if path.startswith("api/"):
+            raise _HTTPException(404)
+        f = _DIST / path
+        return _FileResponse(f if path and f.is_file() else _DIST / "index.html")
