@@ -1,8 +1,10 @@
 """
-공급사 평가 점수화 (MVP3, E 담당)
+공급사 평가 점수 (MVP3, E 담당)
 
-공급사 정보를 넣으면 항목별 점수(0~100)와 총점, 등급을 계산한다.
-기준값과 가중치는 팀 논의 후 아래 상수만 고치면 된다.
+frontend/src/pages/SuppliersPage.jsx 의 score() 와 같은 규칙이다.
+재무 40 + 업계 평판 30 + 거래 신뢰 30 = 100점.
+규칙을 바꾸면 이 파일과 SuppliersPage.jsx 의 score() 를 같이 고친다.
+(화면의 score() 는 서버가 꺼졌을 때 예시 데이터를 보여주는 용도로만 쓰인다)
 
 실행 (레포 루트에서):
     python supplier/supplier_score.py
@@ -10,49 +12,28 @@
 import json
 from pathlib import Path
 
-# 항목별 가중치 (합계 1.0)
-WEIGHTS = {
-    "financial": 0.4,   # 재무제표
-    "industry": 0.2,    # 업계 평가
-    "trade_years": 0.2, # 거래 기간
-    "trade_amount": 0.2 # 거래액
-}
-
-# 등급 기준 (총점 이상이면 해당 등급)
-GRADES = [(80, "A"), (65, "B"), (50, "C"), (0, "D")]
+GRADE = {"A": 1.0, "B": 0.75, "C": 0.5, "D": 0.25}   # 업계 평판 등급 → 비율
 
 
-def scale(value, worst, best):
-    """value를 worst(0점)~best(100점) 사이로 선형 변환. 범위 밖은 0 또는 100."""
-    ratio = (value - worst) / (best - worst)
-    return round(max(0.0, min(1.0, ratio)) * 100, 1)
+def clamp(v):
+    return max(0.0, min(1.0, v))
 
 
-def financial_score(s):
-    """재무 점수: 부채비율(낮을수록 좋음), 영업이익률, 유동비율 평균."""
-    debt = scale(s["debt_ratio"], worst=3.0, best=0.5)         # 300% → 0점, 50% → 100점
-    margin = scale(s["operating_margin"], worst=-0.05, best=0.15)
-    liquidity = scale(s["current_ratio"], worst=0.5, best=2.0)
-    return round((debt + margin + liquidity) / 3, 1)
+def score(s):
+    """공급사 1곳의 점수. 단위: debt·opm·cur 는 %, years 는 년, amount 는 억원."""
+    fin = (clamp(1 - (s["debt"] - 100) / 300)      # 부채비율 100% 이하 만점, 400% 0점
+           + clamp(s["opm"] / 10)                  # 영업이익률 10% 이상 만점
+           + clamp((s["cur"] - 80) / 120)          # 유동비율 80% 0점, 200% 이상 만점
+           ) / 3 * 40
+    rep = GRADE.get(s["rep"], 0.5) * 30
+    trust = clamp(s["years"] / 10) * 15 + clamp(s["amount"] / 500) * 15
+    total = int(fin + rep + trust + 0.5)           # 화면의 Math.round 와 같게 반올림
+    return {"fin": round(fin, 2), "rep": round(rep, 2), "trust": round(trust, 2), "total": total}
 
 
-def score_supplier(s):
-    """공급사 1곳의 항목별 점수, 총점, 등급을 반환."""
-    scores = {
-        "financial": financial_score(s),
-        "industry": float(s["industry_score"]),                    # 이미 0~100으로 입력
-        "trade_years": scale(s["trade_years"], worst=0, best=10),  # 10년 이상이면 만점
-        "trade_amount": scale(s["trade_amount_usd_mn"], worst=0, best=50),
-    }
-    total = round(sum(scores[k] * WEIGHTS[k] for k in WEIGHTS), 1)
-    grade = next(g for cut, g in GRADES if total >= cut)
-    return {
-        "supplier_id": s["supplier_id"],
-        "name": s["name"],
-        "scores": scores,
-        "total_score": total,
-        "grade": grade,
-    }
+def label(total):
+    """화면과 같은 구간: 75 이상 양호, 55 이상 보통, 그 아래 주의."""
+    return "양호" if total >= 75 else "보통" if total >= 55 else "주의"
 
 
 def load_suppliers(path):
@@ -63,5 +44,5 @@ def load_suppliers(path):
 if __name__ == "__main__":
     path = Path(__file__).parent / "sample_suppliers.json"
     for s in load_suppliers(path):
-        r = score_supplier(s)
-        print(f'{r["supplier_id"]} {r["name"]:<10} 총점 {r["total_score"]:>5}  등급 {r["grade"]}  {r["scores"]}')
+        sc = score(s)
+        print(f'{s["id"]:<4} {s["name"]:<14} {sc["total"]:>3}점 {label(sc["total"])}  {sc}')

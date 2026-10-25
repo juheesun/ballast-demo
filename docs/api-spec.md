@@ -46,9 +46,10 @@
 
 | 메서드 | 경로 | 설명 | 담당 |
 |---|---|---|---|
-| GET/POST | `/api/suppliers` | 공급사 목록 / 등록 | MVP3 |
-| GET/PUT | `/api/suppliers/{id}` | 공급사 조회 / 수정 (재무, 업계 평가, 거래기간·거래액) | MVP3 |
-| GET | `/api/suppliers/{id}/score` | 평가 점수 | MVP3 |
+| GET/POST | `/api/suppliers` | 공급사 목록(총점 높은 순, `?grade=A` 필터) / 등록 | MVP3 · 구현됨 |
+| GET/PUT | `/api/suppliers/{id}` | 공급사 조회 / 수정 (재무, 업계 평가, 거래기간·거래액) | MVP3 · 구현됨 |
+| GET | `/api/suppliers/{id}/score` | 평가 점수 (항목별 점수, 총점, 등급, 가중치) | MVP3 · 구현됨 |
+| POST | `/api/suppliers/score-preview` | 저장 없이 점수만 계산 (입력 폼 미리보기) | MVP3 · 구현됨 |
 | GET | `/api/history` | 낙찰/실주 이력 (필터: result, from, to, shipyard) | MVP4 |
 | GET | `/api/history/stats` | 낙찰률, 실주 사유별 건수 | MVP4 |
 
@@ -72,5 +73,27 @@
 `data/dataset.json` 의 입찰 106건(실제 10 + 시나리오 96). 행: `id, origin(real|scenario), variant, date, shipyard, owner, quote, market, ratio, won, loss_reason, margin, note`.
 실제 공개 건은 모두 낙찰이고 실주 사례는 시나리오 변형이므로 화면에 구분 표시를 한다.
 
-### MVP3 공급사 평가
-현재는 서버 API 없이 브라우저(localStorage)에만 저장하는 화면이다. 점수 규칙(재무 40·평판 30·거래 30)은 임시이며 `frontend/src/pages/SuppliersPage.jsx` 의 `score()` 만 고치면 된다. 서버 저장이 필요하면 `GET/POST /api/suppliers` 를 추가한다.
+---
+---
+## v0.3 추가
+
+### MVP3 공급사 평가 (서버 API · 구현됨)
+필드·단위·점수는 `SuppliersPage.jsx` 기준. 점수 계산은 `supplier/supplier_score.py`에서 하고, 화면의 `score()`는 서버가 꺼졌을 때 예시 표시용으로만 쓴다. 규칙을 바꾸면 두 곳을 같이 고친다.
+데이터는 서버 메모리에 저장하며, 재시작하면 `supplier/sample_suppliers.json`(가상 공급사 10곳)으로 초기화된다.
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/api/suppliers` | 목록 (점수 높은 순) |
+| POST | `/api/suppliers` | 등록 (id는 서버가 부여) |
+| GET | `/api/suppliers/{id}` | 조회 |
+| PUT | `/api/suppliers/{id}` | 수정 |
+| DELETE | `/api/suppliers/{id}` | 삭제 |
+| GET | `/api/suppliers/{id}/score` | 점수만 |
+| POST | `/api/suppliers/score-preview` | 저장 없이 점수만 계산 |
+
+입력: `{ name, item, debt, opm, cur, rep, memo, years, amount }`
+- `debt` 부채비율·`opm` 영업이익률·`cur` 유동비율은 %, `rep`는 A~D, `years`는 년, `amount`는 억원
+
+응답: 입력 필드 + `id`, `sample`, `sc: { fin, rep, trust, total }`, `label`(양호/보통/주의)
+- 점수 = 재무 40 + 업계 평판 30 + 거래 신뢰 30
+- 오류: 없는 id 404, 범위 밖 값 422
