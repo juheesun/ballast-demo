@@ -25,13 +25,23 @@ const grade = (t) => (t >= 75 ? 'a' : t >= 55 ? 'b' : 'c')
 const label = (t) => (t >= 75 ? '양호' : t >= 55 ? '보통' : '주의')
 
 async function req(method, url, body) {
-  const r = await fetch(url, {
-    method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  })
-  if (!r.ok) throw new Error(`${method} ${url} 실패 (${r.status})`)
-  return r.status === 204 ? null : r.json()
+  // 서버가 응답하지 않고 멈춰 있어도 3초 뒤에는 실패로 처리한다
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 3000)
+  try {
+    const r = await fetch(url, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: ctrl.signal,
+    })
+    if (!r.ok) throw new Error(`${method} ${url} 실패 (${r.status})`)
+    return r.status === 204 ? null : r.json()
+  } catch (e) {
+    throw e.name === 'AbortError' ? new Error('서버 응답 없음') : e
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 // 폼 값(문자열)을 서버가 받는 형식으로 바꾼다
