@@ -20,5 +20,6 @@ export const api = {
   compare: (bidId, scenario) => request('/api/scenario/compare', json({ bid_id: bidId, scenario })),
   chat: (bidId, message, params) => request('/api/chat', json({ bid_id: bidId, message, params })),
   history: () => request('/api/history'),
+  historyUpload: (file, save) => request(`/api/history/upload?save=${save}&name=${encodeURIComponent(file.name)}`, { method: 'POST', body: file }),
   scenarioTable: (bidId) => request(`/api/bids/${bidId}/scenario-table`),
 }

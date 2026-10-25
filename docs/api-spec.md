@@ -74,3 +74,21 @@
 
 ### MVP3 공급사 평가
 현재는 서버 API 없이 브라우저(localStorage)에만 저장하는 화면이다. 점수 규칙(재무 40·평판 30·거래 30)은 임시이며 `frontend/src/pages/SuppliersPage.jsx` 의 `score()` 만 고치면 된다. 서버 저장이 필요하면 `GET/POST /api/suppliers` 를 추가한다.
+
+---
+## v0.3 추가 (MVP4 · 과거 이력)
+
+### GET /api/history (변경)
+응답에 엑셀 업로드분이 뒤에 붙는다. 업로드 행은 `origin: "upload"`, `id: "UP-0001"` 형식, 같은 필드. `uploaded` = 업로드 건수.
+`margin` 은 모든 행에서 **추정값**이다 (실제 건도 인도 전 입찰 시점 예상치). 화면 표기는 "추정 마진".
+
+### POST /api/history/upload?save=false|true&name=파일명
+요청 본문에 `.xlsx` 파일 그대로 (5MB 이하). `save=false` 는 미리보기만, `true` 는 저장 (오류 줄이 있으면 422).
+첫 줄 열 이름: 입찰일·조선소·견적($M)·시장가($M)·결과(낙찰/실주) 필수 / 선주·척수·실주 사유(가격·납기·사양·금융·기타)·마진(%)·메모 선택.
+응답: `rows[]`(줄 번호 `line`, 값, `errors[]`, `duplicate`), `file_errors[]`, `error_rows`, `new_rows`, `skipped`, `saved`.
+중복: 입찰일·조선소·선주·견적·시장가·결과가 모두 같으면 같은 기록으로 보고 저장하지 않는다 (이미 저장된 기록 / 파일 안에서 겹치는 줄).
+저장: SQLite `data/history.db` (git 에 올리지 않음, `dataset.json` 은 수정하지 않음). 테스트는 `BALLAST_HISTORY_DB=다른경로.db`.
+
+### GET /api/history/stats → 미구현 (팀 합의 대기)
+위 MVP3·4 표의 명세는 그대로 둔다. 현재 낙찰률·실주 사유·견적 수준별 낙찰률은 화면(HistoryPage.jsx)이 `/api/history` 행으로 계산한다.
+구현하게 되면 계산을 서버 한 곳으로 옮기고 화면은 그 값을 쓴다 (두 곳에서 따로 계산해 숫자가 어긋나지 않도록).
