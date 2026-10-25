@@ -1,0 +1,12 @@
+[
+  {"id": "s1", "sample": false, "name": "가온철강", "item": "후판", "debt": 120, "opm": 8.5, "cur": 160, "rep": "A", "memo": "납기 준수율 높음", "years": 12, "amount": 620},
+  {"id": "s2", "sample": false, "name": "한결기전", "item": "엔진·기자재", "debt": 260, "opm": 3.2, "cur": 105, "rep": "B", "memo": "", "years": 4, "amount": 140},
+  {"id": "s3", "sample": false, "name": "새빛도장", "item": "도장", "debt": 390, "opm": -1.5, "cur": 82, "rep": "C", "memo": "최근 납기 지연 2건", "years": 1, "amount": 18},
+  {"id": "s4", "sample": false, "name": "대양프로펠러", "item": "추진기", "debt": 85, "opm": 11.0, "cur": 190, "rep": "A", "memo": "", "years": 15, "amount": 480},
+  {"id": "s5", "sample": false, "name": "거제배관", "item": "배관", "debt": 170, "opm": 5.8, "cur": 128, "rep": "B", "memo": "", "years": 9, "amount": 250},
+  {"id": "s6", "sample": false, "name": "청해도료", "item": "도료", "debt": 110, "opm": 9.4, "cur": 150, "rep": "B", "memo": "", "years": 8, "amount": 300},
+  {"id": "s7", "sample": false, "name": "미래블록", "item": "블록 외주", "debt": 310, "opm": 1.8, "cur": 92, "rep": "C", "memo": "작업 인력 부족", "years": 3, "amount": 130},
+  {"id": "s8", "sample": false, "name": "오션내비", "item": "항해장비", "debt": 140, "opm": 7.2, "cur": 140, "rep": "B", "memo": "", "years": 5, "amount": 95},
+  {"id": "s9", "sample": false, "name": "남해전장", "item": "전기·전자", "debt": 150, "opm": 6.5, "cur": 135, "rep": "B", "memo": "", "years": 4, "amount": 160},
+  {"id": "s10", "sample": false, "name": "신성보온", "item": "보온재", "debt": 420, "opm": -3.0, "cur": 70, "rep": "D", "memo": "재무 악화", "years": 1, "amount": 12}
+]

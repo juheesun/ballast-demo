@@ -46,9 +46,10 @@
 
 | 메서드 | 경로 | 설명 | 담당 |
 |---|---|---|---|
-| GET/POST | `/api/suppliers` | 공급사 목록 / 등록 | MVP3 |
-| GET/PUT | `/api/suppliers/{id}` | 공급사 조회 / 수정 (재무, 업계 평가, 거래기간·거래액) | MVP3 |
-| GET | `/api/suppliers/{id}/score` | 평가 점수 | MVP3 |
+| GET/POST | `/api/suppliers` | 공급사 목록(점수 높은 순) / 등록 | MVP3 · 구현됨 |
+| GET/PUT/DELETE | `/api/suppliers/{id}` | 공급사 조회 / 수정 / 삭제 (재무, 업계 평판, 거래기간·거래액) | MVP3 · 구현됨 |
+| GET | `/api/suppliers/{id}/score` | 평가 점수 (`sc`, `label`) | MVP3 · 구현됨 |
+| POST | `/api/suppliers/score-preview` | 저장 없이 점수만 계산 | MVP3 · 구현됨 |
 | GET | `/api/history` | 낙찰/실주 이력 (필터: result, from, to, shipyard) | MVP4 |
 | GET | `/api/history/stats` | 낙찰률, 실주 사유별 건수 | MVP4 |
 
@@ -72,11 +73,7 @@
 `data/dataset.json` 의 입찰 106건(실제 10 + 시나리오 96). 행: `id, origin(real|scenario), variant, date, shipyard, owner, quote, market, ratio, won, loss_reason, margin, note`.
 실제 공개 건은 모두 낙찰이고 실주 사례는 시나리오 변형이므로 화면에 구분 표시를 한다.
 
-### MVP3 공급사 평가
-현재는 서버 API 없이 브라우저(localStorage)에만 저장하는 화면이다. 점수 규칙(재무 40·평판 30·거래 30)은 임시이며 `frontend/src/pages/SuppliersPage.jsx` 의 `score()` 만 고치면 된다. 서버 저장이 필요하면 `GET/POST /api/suppliers` 를 추가한다.
-
 ---
-<<<<<<< HEAD
 ## v0.3 추가 (MVP2 · 시나리오)
 
 ### POST /api/scenario/margin-path
@@ -94,7 +91,8 @@
 - 환율: `달러`, `달러 값/가치`, `원화`(원화 강세 = 환율 하락으로 부호 반대), `강세/약세`, `절상/절하`
 - 숫자 없이 방향만 말하면 % 조건은 5%, 납기 지연은 3개월로 가정하고 `notes` 로 알린다.
 - 납기: `개월` 외에 `달`, `년` 단위도 읽는다.
-=======
+
+---
 ## v0.3 추가 (MVP4 · 과거 이력)
 
 ### GET /api/history (변경)
@@ -111,4 +109,27 @@
 ### GET /api/history/stats → 미구현 (팀 합의 대기)
 위 MVP3·4 표의 명세는 그대로 둔다. 현재 낙찰률·실주 사유·견적 수준별 낙찰률은 화면(HistoryPage.jsx)이 `/api/history` 행으로 계산한다.
 구현하게 되면 계산을 서버 한 곳으로 옮기고 화면은 그 값을 쓴다 (두 곳에서 따로 계산해 숫자가 어긋나지 않도록).
->>>>>>> origin/minseo/history
+
+---
+## v0.3 추가 (MVP3 · 공급사 평가)
+
+### 공급사 평가 서버 API (구현됨)
+필드·단위·점수는 `SuppliersPage.jsx` 기준. 점수 계산은 `supplier/supplier_score.py`에서 하고, 화면의 `score()`는 서버가 꺼졌을 때 예시 표시용으로만 쓴다. 규칙을 바꾸면 두 곳을 같이 고친다.
+데이터는 서버 메모리에 저장하며, 재시작하면 `supplier/sample_suppliers.json`(가상 공급사 10곳)으로 초기화된다.
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/api/suppliers` | 목록 (점수 높은 순) |
+| POST | `/api/suppliers` | 등록 (id는 서버가 부여) |
+| GET | `/api/suppliers/{id}` | 조회 |
+| PUT | `/api/suppliers/{id}` | 수정 |
+| DELETE | `/api/suppliers/{id}` | 삭제 |
+| GET | `/api/suppliers/{id}/score` | 점수만 |
+| POST | `/api/suppliers/score-preview` | 저장 없이 점수만 계산 |
+
+입력: `{ name, item, debt, opm, cur, rep, memo, years, amount }`
+- `debt` 부채비율·`opm` 영업이익률·`cur` 유동비율은 %, `rep`는 A~D, `years`는 년, `amount`는 억원
+
+응답: 입력 필드 + `id`, `sample`, `sc: { fin, rep, trust, total }`, `label`(양호/보통/주의)
+- 점수 = 재무 40 + 업계 평판 30 + 거래 신뢰 30
+- 오류: 없는 id 404, 범위 밖 값 422

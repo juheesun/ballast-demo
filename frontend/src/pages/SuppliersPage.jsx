@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 
-// MVP3 · 공급사 평가. 지금은 이 브라우저(localStorage)에만 저장한다. 서버 저장·점수 규칙은 MVP3 담당이 이어서 정한다.
-const KEY = 'ballast.suppliers.v1'
+// MVP3 · 공급사 평가. 데이터와 점수는 서버(/api/suppliers)에서 받는다.
+// 서버에 연결할 수 없으면 아래 SEED 를 예시 데이터로 보여준다(저장되지 않음).
+const API = '/api/suppliers'
 const GRADE = { A: 1, B: 0.75, C: 0.5, D: 0.25 }
 const SEED = [
-  { id: 's1', sample: true, name: '(예시) 가온철강', item: '후판', debt: 120, opm: 8.5, cur: 160, rep: 'A', memo: '납기 준수율 높음', years: 12, amount: 620 },
-  { id: 's2', sample: true, name: '(예시) 한결기전', item: '엔진·기자재', debt: 260, opm: 3.2, cur: 105, rep: 'B', memo: '', years: 4, amount: 140 },
-  { id: 's3', sample: true, name: '(예시) 새빛도장', item: '도장', debt: 390, opm: -1.5, cur: 82, rep: 'C', memo: '최근 납기 지연 2건', years: 1, amount: 18 },
+  { id: 's1', name: '가온철강', item: '후판', debt: 120, opm: 8.5, cur: 160, rep: 'A', memo: '납기 준수율 높음', years: 12, amount: 620 },
+  { id: 's2', name: '한결기전', item: '엔진·기자재', debt: 260, opm: 3.2, cur: 105, rep: 'B', memo: '', years: 4, amount: 140 },
+  { id: 's3', name: '새빛도장', item: '도장', debt: 390, opm: -1.5, cur: 82, rep: 'C', memo: '최근 납기 지연 2건', years: 1, amount: 18 },
 ]
 const EMPTY = { name: '', item: '', debt: '', opm: '', cur: '', rep: 'B', memo: '', years: '', amount: '' }
+const NUMS = ['debt', 'opm', 'cur', 'years', 'amount']
 const clamp = (v) => Math.max(0, Math.min(1, v))
 
-// 임시 점수 규칙 (재무 40 + 업계 평판 30 + 거래 신뢰 30). 팀에서 가중치를 정하면 이 함수만 고치면 된다.
+// 점수 규칙 (재무 40 + 업계 평판 30 + 거래 신뢰 30). 서버의 supplier/supplier_score.py 와 같은 규칙이다.
+// 평소에는 서버가 계산한 값을 쓰고, 이 함수는 서버가 꺼졌을 때 예시 데이터에만 쓴다. 규칙을 바꾸면 두 곳을 같이 고친다.
 export function score(s) {
   const fin = (clamp(1 - (Number(s.debt) - 100) / 300) + clamp(Number(s.opm) / 10) + clamp((Number(s.cur) - 80) / 120)) / 3 * 40
   const rep = (GRADE[s.rep] ?? 0.5) * 30
@@ -21,32 +24,72 @@ export function score(s) {
 const grade = (t) => (t >= 75 ? 'a' : t >= 55 ? 'b' : 'c')
 const label = (t) => (t >= 75 ? '양호' : t >= 55 ? '보통' : '주의')
 
-function load() {
-  try { const v = JSON.parse(localStorage.getItem(KEY)); if (Array.isArray(v)) return v } catch { /* 저장소를 못 쓰면 예시로 시작 */ }
-  return SEED
+async function req(method, url, body) {
+  // 서버가 응답하지 않고 멈춰 있어도 3초 뒤에는 실패로 처리한다
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 3000)
+  try {
+    const r = await fetch(url, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: ctrl.signal,
+    })
+    if (!r.ok) throw new Error(`${method} ${url} 실패 (${r.status})`)
+    return r.status === 204 ? null : r.json()
+  } catch (e) {
+    throw e.name === 'AbortError' ? new Error('서버 응답 없음') : e
+  } finally {
+    clearTimeout(timer)
+  }
 }
+
+// 폼 값(문자열)을 서버가 받는 형식으로 바꾼다
+const toPayload = (f) => ({
+  name: f.name.trim(), item: f.item, rep: f.rep, memo: f.memo,
+  ...Object.fromEntries(NUMS.map((k) => [k, Number(f[k])])),
+})
 
 function Field({ label: lb, unit, children }) {
   return <div className="field"><label>{lb}{unit && <span className="unit"> ({unit})</span>}</label>{children}</div>
 }
 
 export default function SuppliersPage() {
-  const [list, setList] = useState(load)
+  const [list, setList] = useState([])
+  const [offline, setOffline] = useState(false)  // true = 서버 연결 안 됨, 예시 데이터 표시 중
+  const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState('')
   const [sel, setSel] = useState(null)
-  const [form, setForm] = useState(null)       // null = 닫힘
-  useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(list)) } catch { /* 무시 */ } }, [list])
+  const [form, setForm] = useState(null)         // null = 닫힘
 
-  const rows = useMemo(() => list.map((s) => ({ ...s, sc: score(s) })).sort((a, b) => b.sc.total - a.sc.total), [list])
+  const reload = () =>
+    req('GET', API)
+      .then((data) => { setList(data); setOffline(false) })
+      .catch(() => { setList(SEED); setOffline(true) })
+      .finally(() => setLoading(false))
+  useEffect(() => { reload() }, [])
+
+  const rows = useMemo(() => list.map((s) => ({ ...s, sc: s.sc ?? score(s) })).sort((a, b) => b.sc.total - a.sc.total), [list])
   const cur = rows.find((r) => r.id === sel) || rows[0]
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
   const num = (k, ph) => <input type="number" step="any" value={form[k]} onChange={set(k)} placeholder={ph} />
-  const valid = form && form.name.trim() && ['debt', 'opm', 'cur', 'years', 'amount'].every((k) => form[k] !== '' && !isNaN(Number(form[k])))
-  const save = () => {
-    const item = { ...form, id: form.id || `s${Date.now()}`, sample: false, name: form.name.trim() }
-    setList(form.id ? list.map((s) => (s.id === form.id ? item : s)) : [...list, item])
-    setSel(item.id); setForm(null)
+  const valid = form && form.name.trim() && NUMS.every((k) => form[k] !== '' && !isNaN(Number(form[k])))
+
+  const save = async () => {
+    setErr('')
+    try {
+      const saved = form.id
+        ? await req('PUT', `${API}/${form.id}`, toPayload(form))
+        : await req('POST', API, toPayload(form))
+      await reload()
+      setSel(saved.id); setForm(null)
+    } catch (e) { setErr(`저장하지 못했습니다. 백엔드 서버가 켜져 있는지 확인하세요. (${e.message})`) }
   }
-  const remove = (id) => { setList(list.filter((s) => s.id !== id)); setSel(null) }
+  const remove = async (id) => {
+    setErr('')
+    try { await req('DELETE', `${API}/${id}`); await reload(); setSel(null) }
+    catch (e) { setErr(`삭제하지 못했습니다. (${e.message})`) }
+  }
 
   return (
     <>
@@ -56,10 +99,15 @@ export default function SuppliersPage() {
       </div>
       <div className="stack">
         <div className="toolbar">
-          <button className="btn primary" onClick={() => setForm({ ...EMPTY })}>+ 공급사 등록</button>
+          <button className="btn primary" disabled={offline} onClick={() => setForm({ ...EMPTY })} style={{ opacity: offline ? 0.5 : 1 }}>+ 공급사 등록</button>
           <span className="grow" />
-          <span className="badge">점수 규칙은 임시(재무 40 · 평판 30 · 거래 30)이며, 이 브라우저에만 저장됩니다</span>
+          <span className="badge">
+            {offline
+              ? '서버에 연결할 수 없어 예시 데이터를 보여주는 중입니다. 등록·수정은 서버가 켜진 뒤에 할 수 있습니다'
+              : '점수 규칙: 재무 40 · 평판 30 · 거래 30'}
+          </span>
         </div>
+        {err && <div className="badge">{err}</div>}
 
         {form && (
           <section className="card card-pad">
@@ -94,7 +142,7 @@ export default function SuppliersPage() {
         <div className="two wide-left">
           <section className="card card-pad">
             <h2 className="card-title">공급사 목록<span className="unit">{rows.length}곳 · 점수순</span></h2>
-            {rows.length === 0 ? <p className="empty">등록된 공급사가 없습니다.</p> : (
+            {loading ? <p className="empty">불러오는 중…</p> : rows.length === 0 ? <p className="empty">등록된 공급사가 없습니다.</p> : (
               <table className="data">
                 <thead><tr><th>공급사</th><th className="l">품목</th><th>부채비율</th><th>거래</th><th>점수</th></tr></thead>
                 <tbody>
@@ -126,8 +174,8 @@ export default function SuppliersPage() {
                 </tbody>
               </table>
               <div className="toolbar" style={{ marginTop: 14, marginBottom: 0 }}>
-                {!cur.sample && <button className="btn" onClick={() => setForm({ ...cur })}>수정</button>}
-                <button className="btn ghost" onClick={() => remove(cur.id)}>삭제</button>
+                {!cur.sample && !offline && <button className="btn" onClick={() => setForm({ ...cur })}>수정</button>}
+                {!offline && <button className="btn ghost" onClick={() => remove(cur.id)}>삭제</button>}
                 {cur.sample && <span className="badge">예시 데이터</span>}
               </div>
             </section>

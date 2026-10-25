@@ -16,7 +16,9 @@ app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http
                    allow_methods=["*"], allow_headers=["*"])
 be = Backend()
 
-
+from .routers import suppliers          # E: 공급사 평가
+app.include_router(suppliers.router)
+                   
 class ScenarioIn(BaseModel):
     comp_pct: float = Field(0.0, ge=-0.5, le=0.5, description="경쟁사 견적 변화 (-0.05 = 5% 싸게)")
     steel_pct: float = Field(0.0, ge=-0.5, le=1.0, description="후판가 변화")
