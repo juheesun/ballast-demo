@@ -97,6 +97,6 @@ def chat(body: ChatIn):
     return answer(be, body.bid_id, body.message, body.params.model_dump())
 
 
-@app.get("/api/history")
-def history():
-    return be.history()
+from .routers import history             # MVP4 과거 이력: dataset.json + 엑셀 업로드분(SQLite)
+history.be = be
+app.include_router(history.router)
