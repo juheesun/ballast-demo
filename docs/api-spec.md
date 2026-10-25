@@ -46,10 +46,10 @@
 
 | 메서드 | 경로 | 설명 | 담당 |
 |---|---|---|---|
-| GET/POST | `/api/suppliers` | 공급사 목록(총점 높은 순, `?grade=A` 필터) / 등록 | MVP3 · 구현됨 |
-| GET/PUT | `/api/suppliers/{id}` | 공급사 조회 / 수정 (재무, 업계 평가, 거래기간·거래액) | MVP3 · 구현됨 |
-| GET | `/api/suppliers/{id}/score` | 평가 점수 (항목별 점수, 총점, 등급, 가중치) | MVP3 · 구현됨 |
-| POST | `/api/suppliers/score-preview` | 저장 없이 점수만 계산 (입력 폼 미리보기) | MVP3 · 구현됨 |
+| GET/POST | `/api/suppliers` | 공급사 목록(점수 높은 순) / 등록 | MVP3 · 구현됨 |
+| GET/PUT/DELETE | `/api/suppliers/{id}` | 공급사 조회 / 수정 / 삭제 (재무, 업계 평판, 거래기간·거래액) | MVP3 · 구현됨 |
+| GET | `/api/suppliers/{id}/score` | 평가 점수 (`sc`, `label`) | MVP3 · 구현됨 |
+| POST | `/api/suppliers/score-preview` | 저장 없이 점수만 계산 | MVP3 · 구현됨 |
 | GET | `/api/history` | 낙찰/실주 이력 (필터: result, from, to, shipyard) | MVP4 |
 | GET | `/api/history/stats` | 낙찰률, 실주 사유별 건수 | MVP4 |
 
@@ -74,10 +74,46 @@
 실제 공개 건은 모두 낙찰이고 실주 사례는 시나리오 변형이므로 화면에 구분 표시를 한다.
 
 ---
----
-## v0.3 추가
+## v0.3 추가 (MVP2 · 시나리오)
 
-### MVP3 공급사 평가 (서버 API · 구현됨)
+### POST /api/scenario/margin-path
+계약부터 인도까지 달마다 마진 범위. 계산은 `backend/margin_path.py` (modeling/ 의 MarginModel 과 같은 난수라 마지막 달 값 = 카드의 예상 마진·적자 확률).
+요청: `/api/scenario/compare` 와 같음 → `{ "bid_id": "REAL-05", "scenario": { "fx_pct": -0.05 } }`
+응답: `{ source, bid_id, base, scenario, milestones }`
+- `base` / `scenario`: `{ quote, bep, months, points[] }`, `points[]` = `{ month, p10, p50, p90, mean, loss_prob }` (month 0 = 계약, months = 인도)
+- `milestones[]`: `{ month, label }` 계약·강재절단·탑재·진수·인도. 납기를 4등분한 화면용 표시이고 계산에는 쓰지 않는다.
+- 원가 초과는 `t / months` 만큼 반영 (인도 시점에 전부).
+
+### scenario-table 행에 `margin_mean_now` 추가
+`GET /api/bids/{id}/scenario-table` 각 행에 인도 시점 기대 마진(`margin_mean_now`)을 추가했다.
+
+### /api/chat 해석 규칙 확장
+- 환율: `달러`, `달러 값/가치`, `원화`(원화 강세 = 환율 하락으로 부호 반대), `강세/약세`, `절상/절하`
+- 숫자 없이 방향만 말하면 % 조건은 5%, 납기 지연은 3개월로 가정하고 `notes` 로 알린다.
+- 납기: `개월` 외에 `달`, `년` 단위도 읽는다.
+
+---
+## v0.3 추가 (MVP4 · 과거 이력)
+
+### GET /api/history (변경)
+응답에 엑셀 업로드분이 뒤에 붙는다. 업로드 행은 `origin: "upload"`, `id: "UP-0001"` 형식, 같은 필드. `uploaded` = 업로드 건수.
+`margin` 은 모든 행에서 **추정값**이다 (실제 건도 인도 전 입찰 시점 예상치). 화면 표기는 "추정 마진".
+
+### POST /api/history/upload?save=false|true&name=파일명
+요청 본문에 `.xlsx` 파일 그대로 (5MB 이하). `save=false` 는 미리보기만, `true` 는 저장 (오류 줄이 있으면 422).
+첫 줄 열 이름: 입찰일·조선소·견적($M)·시장가($M)·결과(낙찰/실주) 필수 / 선주·척수·실주 사유(가격·납기·사양·금융·기타)·마진(%)·메모 선택.
+응답: `rows[]`(줄 번호 `line`, 값, `errors[]`, `duplicate`), `file_errors[]`, `error_rows`, `new_rows`, `skipped`, `saved`.
+중복: 입찰일·조선소·선주·견적·시장가·결과가 모두 같으면 같은 기록으로 보고 저장하지 않는다 (이미 저장된 기록 / 파일 안에서 겹치는 줄).
+저장: SQLite `data/history.db` (git 에 올리지 않음, `dataset.json` 은 수정하지 않음). 테스트는 `BALLAST_HISTORY_DB=다른경로.db`.
+
+### GET /api/history/stats → 미구현 (팀 합의 대기)
+위 MVP3·4 표의 명세는 그대로 둔다. 현재 낙찰률·실주 사유·견적 수준별 낙찰률은 화면(HistoryPage.jsx)이 `/api/history` 행으로 계산한다.
+구현하게 되면 계산을 서버 한 곳으로 옮기고 화면은 그 값을 쓴다 (두 곳에서 따로 계산해 숫자가 어긋나지 않도록).
+
+---
+## v0.3 추가 (MVP3 · 공급사 평가)
+
+### 공급사 평가 서버 API (구현됨)
 필드·단위·점수는 `SuppliersPage.jsx` 기준. 점수 계산은 `supplier/supplier_score.py`에서 하고, 화면의 `score()`는 서버가 꺼졌을 때 예시 표시용으로만 쓴다. 규칙을 바꾸면 두 곳을 같이 고친다.
 데이터는 서버 메모리에 저장하며, 재시작하면 `supplier/sample_suppliers.json`(가상 공급사 10곳)으로 초기화된다.
 

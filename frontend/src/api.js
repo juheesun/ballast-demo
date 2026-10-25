@@ -19,6 +19,8 @@ export const api = {
   curve: (bidId, params = {}) => request(`/api/bids/${bidId}/curve?` + new URLSearchParams(params)),
   compare: (bidId, scenario) => request('/api/scenario/compare', json({ bid_id: bidId, scenario })),
   chat: (bidId, message, params) => request('/api/chat', json({ bid_id: bidId, message, params })),
+  marginPath: (bidId, scenario) => request('/api/scenario/margin-path', json({ bid_id: bidId, scenario })),
   history: () => request('/api/history'),
+  historyUpload: (file, save) => request(`/api/history/upload?save=${save}&name=${encodeURIComponent(file.name)}`, { method: 'POST', body: file }),
   scenarioTable: (bidId) => request(`/api/bids/${bidId}/scenario-table`),
 }

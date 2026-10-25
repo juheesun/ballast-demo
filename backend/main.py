@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from .engine import Backend, PRESETS
 from .chat import answer
+from .margin_path import margin_path
 
 app = FastAPI(title="견적 리스크 매니저 API", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -68,6 +69,13 @@ def compare(body: CompareIn):
     return be.compare(body.bid_id, body.scenario.model_dump())
 
 
+@app.post("/api/scenario/margin-path")
+def scenario_margin_path(body: CompareIn):
+    """MVP2 · 계약~인도 달마다 마진 범위(10·50·90%)와 적자 확률. 기준 vs 시나리오. 계산은 backend/margin_path.py"""
+    _check(body.bid_id)
+    return margin_path(be, body.bid_id, body.scenario.model_dump())
+
+
 @app.get("/api/bids/{bid_id}/scenario-table")
 def scenario_table(bid_id: str):
     _check(bid_id)
@@ -91,6 +99,25 @@ def chat(body: ChatIn):
     return answer(be, body.bid_id, body.message, body.params.model_dump())
 
 
-@app.get("/api/history")
-def history():
-    return be.history()
+from .routers import history             # MVP4 과거 이력: dataset.json + 엑셀 업로드분(SQLite)
+history.be = be
+app.include_router(history.router)
+
+
+# ── 배포용: 빌드된 화면(frontend/dist)이 있으면 같은 서버가 함께 서비스한다 (링크 하나로 공유) ──
+# 개발 중에는 dist 가 없으므로 아무 일도 하지 않는다 (화면은 npm run dev 의 5173 포트).
+from pathlib import Path as _Path
+from fastapi import HTTPException as _HTTPException
+from fastapi.responses import FileResponse as _FileResponse
+from fastapi.staticfiles import StaticFiles as _StaticFiles
+
+_DIST = _Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if (_DIST / "index.html").exists():
+    app.mount("/assets", _StaticFiles(directory=_DIST / "assets"), name="assets")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def _spa(path: str):
+        if path.startswith("api/"):
+            raise _HTTPException(404)
+        f = _DIST / path
+        return _FileResponse(f if path and f.is_file() else _DIST / "index.html")

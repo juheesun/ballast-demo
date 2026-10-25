@@ -175,12 +175,13 @@ class Backend:
     def scenario_table(self, bid_id: str) -> list:
         base = self.curve(bid_id)["summary"]
         rows = [{"id": "base", "label": "기준", "group": "", "params": {}, "p_now": base["p_now"], "ev_now": base["ev_now"],
-                 "loss_prob_now": base["loss_prob_now"], "recommended": base["recommended"], "d_ev": 0.0}]
+                 "loss_prob_now": base["loss_prob_now"], "margin_mean_now": base["margin_mean_now"],
+                 "recommended": base["recommended"], "d_ev": 0.0}]
         for pr in PRESETS:
             s = self.curve(bid_id, pr["params"])["summary"]
             rows.append({"id": pr["id"], "label": pr["label"], "group": pr["group"], "params": pr["params"],
                          "p_now": s["p_now"], "ev_now": s["ev_now"], "loss_prob_now": s["loss_prob_now"],
-                         "recommended": s["recommended"], "d_ev": _num(s["ev_now"] - base["ev_now"])})
+                         "margin_mean_now": s["margin_mean_now"], "recommended": s["recommended"], "d_ev": _num(s["ev_now"] - base["ev_now"])})
         return rows
 
     def fx_latest(self) -> dict:
