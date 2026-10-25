@@ -1,15 +1,3 @@
-# 웹 화면 (FastAPI + React)
-
-저장소 최상위에 `backend/`, `frontend/` 를 추가한다. `modeling/` 은 건드리지 않는다.
-
-```
-Ballast/
-├─ data/  docs/  modeling/        (기존)
-├─ backend/    FastAPI (modeling 의 B 코드를 불러다 씀)
-├─ frontend/   React + Vite
-└─ docs/api-spec.md
-```
-
 ## 실행 (터미널 2개)
 ```bash
 # 터미널 1 · 저장소 최상위에서
@@ -24,10 +12,8 @@ npm run dev
 ```
 브라우저에서 http://localhost:5173 · API 문서는 http://localhost:8000/docs
 
-- A 의 모델(`modeling/features.py`, `win_model.py`, `models/win_logit.pkl`)이 없으면 자동으로 **예시 모드**로 뜨고 화면에 '예시 데이터'가 표시된다.
-- 강제로 예시 모드: `BALLAST_MOCK=1 uvicorn backend.main:app --port 8000`
 
-## 팀원이 일하는 곳
+## 팀원 담당 파일
 | 담당 | 파일 |
 |---|---|
 | MVP1 홈 | `frontend/src/pages/HomePage.jsx` |
@@ -37,11 +23,5 @@ npm run dev
 | 공통 (A) | `components/` (Layout, BidBar, Stat, Figure, charts), `styles.css`, `api.js`, `docs/api-spec.md` |
 
 색·글자·간격은 `frontend/src/styles.css` 맨 위 토큰만 고치면 전체가 바뀐다.
-
-## .gitignore 에 추가할 줄
-```
-node_modules/
-frontend/dist/
-```
 
 파이썬 3.9 이상에서 동작한다 (맥 기본 3.9 확인 필요). 질문형 시나리오는 외부 API 없이 규칙으로 해석한다.
