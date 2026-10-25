@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 ROOT = Path(__file__).resolve().parents[2]          # 레포 루트 (C:\Ballast)
 sys.path.insert(0, str(ROOT / "supplier"))
-from supplier_score import score_supplier, load_suppliers  # noqa: E402
+from supplier_score import score_supplier, load_suppliers, WEIGHTS  # noqa: E402
 
 router = APIRouter(prefix="/api/suppliers", tags=["suppliers"])
 
@@ -67,6 +67,16 @@ def get_supplier(supplier_id: str):
     if supplier_id not in _store:
         raise HTTPException(404, f"{supplier_id} 공급사가 없습니다")
     return _with_score(_store[supplier_id])
+
+
+@router.get("/{supplier_id}/score")
+def get_supplier_score(supplier_id: str):
+    """평가 점수만 반환 (api-spec.md 의 MVP3 초안 경로)."""
+    if supplier_id not in _store:
+        raise HTTPException(404, f"{supplier_id} 공급사가 없습니다")
+    r = score_supplier(_store[supplier_id])
+    return {"supplier_id": supplier_id, "scores": r["scores"],
+            "total_score": r["total_score"], "grade": r["grade"], "weights": WEIGHTS}
 
 
 @router.post("", status_code=201)
