@@ -214,6 +214,7 @@ table.data td.l, table.data th.l { text-align: left; }
 .sw.band { background: var(--c); opacity: .6; border-radius: 2px; }
 .sw.hatch { background: repeating-linear-gradient(45deg, var(--c) 0 1px, transparent 1px 4px); opacity: .7; }
 .sw.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.sw.ring { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--c); background: var(--card); }
 .sw.vline { width: 0; height: 14px; border-left: 2px solid var(--c); }
 .assume { display: inline-flex; align-items: center; gap: 5px; border: 1px dashed #e6c3a8; background: #fffaf6; border-radius: 7px; padding: 2px 6px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .assume:hover { border-color: var(--accent); }
@@ -346,5 +347,9 @@ table.data tr.total td { font-weight: 700; border-top: 1px solid var(--line); }
 .kv-row .tag { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px; background: var(--bg); color: var(--ink-2); }
 .kv-row .tag.ok { color: var(--ok); background: #e5f3ec; } .kv-row .tag.mid { color: var(--accent); background: var(--accent-soft); } .kv-row .tag.warn { color: #fff; background: var(--loss); }
 .summary hr { border: 0; border-top: 1px solid var(--line); margin: 6px 0; }
-.summary .tip { margin-top: 12px; background: var(--bg); border-radius: 8px; padding: 10px 12px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.summary .tip { margin-top: 12px; background: var(--bg); border-radius: 8px; padding: 10px 12px; font-size: 13px; display: grid; gap: 6px; }
+.summary .tip-now { color: var(--ink-3); font-size: 12.5px; }
+.summary .tip-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.summary .tip-row .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+.summary .tip-row .tag.ok { color: var(--ok); background: #e5f3ec; }
 .section-title .section-sub { font-size: 12.5px; font-weight: 400; color: var(--ink-3); margin-left: 6px; }

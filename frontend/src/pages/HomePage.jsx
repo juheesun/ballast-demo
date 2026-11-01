@@ -15,8 +15,9 @@ import { EvChart, MarginBandChart, LossChart, BacktestChart, COLORS as C } from 
 const LEGEND = {
   ev: [
     { kind: 'line', color: C.LINE, label: '기대가치', why: '견적가마다 낙찰확률 × (견적가 − 손익분기). 높을수록 평균적으로 많이 남는 견적입니다.' },
-    { kind: 'band', color: C.BAND, label: '권장 구간', why: '기대가치가 최고점의 85% 이상인 범위. 이 안이면 기대가치를 크게 잃지 않습니다.' },
-    { kind: 'dot', color: C.ACCENT, label: '권장가', why: '권장 구간의 하한. 기대가치를 지키면서 낙찰확률이 가장 높은 견적가입니다.' },
+    { kind: 'band', color: C.BAND, label: '권장 범위', why: '기대가치가 최고점의 85% 이상인 범위. 이 안이면 기대가치를 크게 잃지 않습니다.' },
+    { kind: 'dot', color: C.ACCENT, label: '이익 우선가', why: '기대가치가 가장 높은 견적가. 평균적으로 가장 많이 남습니다.' },
+    { kind: 'ring', color: C.LINE, label: '수주 우선가', why: '권장 범위의 아래 끝. 기대가치를 크게 잃지 않으면서 낙찰확률이 가장 높은 견적가입니다.' },
     { kind: 'hatch', color: C.LOSS, label: '손익분기 아래', why: '이 견적가로 따면 원가도 못 건집니다. 들어가면 안 되는 영역입니다.' },
     { kind: 'vline', color: C.INK, label: '견적가', why: '지금 내려는 견적가의 위치입니다.' },
   ],
@@ -175,7 +176,7 @@ function DecisionCard({ data, onHedge }) {
 }
 
 // 견적가 슬라이더: 움직이면 아래 숫자·결론·그래프의 현재 위치가 모두 그 견적가 기준으로 다시 계산된다.
-// 트랙 색: 빗금 = 손익분기 아래, 파란 띠 = 권장 구간
+// 트랙 색: 분홍 = 손익분기 아래, 파란 띠 = 권장 범위
 function QuoteSlider({ data, value, onChange }) {
   const s = data.summary, g = data.grid
   const lo = g[0].quote, hi = g[g.length - 1].quote, market = s.quote_now / s.ratio_now
@@ -205,12 +206,13 @@ function QuoteSlider({ data, value, onChange }) {
       <div className="qs-ends">
         <span>{usd(lo, 0)} (공격적)</span>
         <span className="qs-btns">
-          {s.recommended != null && <button type="button" className="btn" onClick={() => onChange(s.recommended)}>권장가 {usd(s.recommended)}로</button>}
+          {s.recommended != null && <button type="button" className="btn" onClick={() => onChange(s.best_quote)}>이익 우선가 {usd(s.best_quote)}로</button>}
+          {s.recommended != null && <button type="button" className="btn" onClick={() => onChange(s.recommended)}>수주 우선가 {usd(s.recommended)}로</button>}
           {Math.abs(d) >= 0.05 && <button type="button" className="btn ghost" onClick={() => onChange(null)}>입찰 견적가로</button>}
         </span>
         <span>{usd(hi, 0)} (보수적)</span>
       </div>
-      <div className="qs-legend"><i className="lg-hatch" />손익분기 아래 <i className="lg-band" />권장 구간</div>
+      <div className="qs-legend"><i className="lg-hatch" />손익분기 아래 <i className="lg-band" />권장 범위</div>
     </section>
   )
 }
@@ -255,7 +257,8 @@ export default function HomePage() {
               { k: '기대가치 (척당)', v: `${s.ev_now.toFixed(1)} $M`, s: '낙찰확률 × (견적가 − 손익분기)' },
               { k: '적자확률', v: pct(s.loss_prob_now, 0), tone: s.loss_prob_now > a.loss_target ? 'warn' : '',
                 s: `인도까지 ${s.months}개월 · 예전 계산이면 ${pct(shown.simple.loss_prob, 0)}` },
-              { k: '권장 견적가', v: s.recommended != null ? usd(s.recommended) : '없음', tone: 'accent', s: s.band_lo != null ? `권장 구간 ${usd(s.band_lo)} ~ ${usd(s.band_hi)}` : '기대가치가 0 이하' },
+              { k: '이익 우선가', v: s.recommended != null ? usd(s.best_quote) : '없음', tone: 'accent',
+                s: s.recommended != null ? `수주 우선가 ${usd(s.recommended)} · 권장 범위 ${usd(s.band_lo)} ~ ${usd(s.band_hi)}` : '기대가치가 0 이하' },
             ]} />
 
             <div className="two wide-left">
@@ -264,7 +267,7 @@ export default function HomePage() {
                 <EvChart data={shown} height={340} />
                 <Legend items={LEGEND.ev} />
               </Figure>
-              <Conclusions data={shown} onRecommended={() => setQuote(s.recommended)} />
+              <Conclusions data={shown} onMove={setQuote} />
             </div>
             <div className="two">
               <Figure title="견적가별 적자확률" unit="%" info="견적을 얼마 이상 불러야 환율이 나빠져도 버틸 수 있는지 봅니다.">

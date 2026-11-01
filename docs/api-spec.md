@@ -178,3 +178,7 @@
 견적리스크와 같은 기본 가정(원가 통화 구분·대금 분할, 헤지 0)으로 계산한다 (`quote_risk.apply_defaults`). 두 화면의 숫자가 같다.
 `summary` 에 예전 가정 값 `loss_prob_simple`·`fx_breakeven_simple`, 원화 원가 비중 `krw_cost_share` 를 함께 준다.
 `fx_breakeven` 이 `null` 이면 환율이 입찰 시점의 절반 아래로 내려가도 적자가 나지 않는다는 뜻이다.
+
+### 화면 용어: 이익 우선가 · 수주 우선가 · 권장 범위 (v0.4)
+값은 그대로이고 화면·챗봇의 이름만 바꿨다. `best_quote` = **이익 우선가**(기대가치 최고점), `recommended`(= `band_lo`, A 정책 값) = **수주 우선가**,
+`band_lo`~`band_hi` = **권장 범위**(기대가치가 최고점의 85% 이상). `scenario-table` 각 행에 `best_quote` 추가.

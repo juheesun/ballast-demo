@@ -11,7 +11,7 @@
   환헤지(%)                 "대금 50%를 환헤지하면", "헤지 30%면" → 조건은 그대로 두고 헤지 결과만 답한다 (margin_path.hedge)
 숫자 없이 방향만 말하면 % 조건은 5%, 납기는 3개월로 가정하고 notes 로 알린다.
 여러 조건을 섞어도 되고("후판가랑 환율이 5%씩 오르면"), 조건 이름 없이 숫자만 말하면("그럼 10%면?") 지금 걸려 있는 조건 하나에 적용한다.
-"환율 조건 빼줘"는 그 조건만 빼고, "초기화"는 전부 뺀다. "지금 낙찰확률은?"·"권장가 얼마야?"에는 현재 조건의 결과를 요약해 답한다.
+"환율 조건 빼줘"는 그 조건만 빼고, "초기화"는 전부 뺀다. "지금 낙찰확률은?"·"권장가 얼마야?"·"이익 우선가는?"에는 현재 조건의 결과를 요약해 답한다.
 
 다른 표현을 더 알아듣게 하려면 아래 ANCHORS / NEG / POS 만 늘리면 된다.
 나중에 Claude API 로 바꾸더라도, answer() 의 출력 형식만 지키면 화면은 그대로다.
@@ -411,18 +411,18 @@ def _summary_lines(be, bid_id: str, params: dict) -> tuple:
              f"적자확률 {_p(s['loss_prob_now'])}예요.",
              f"기대가치는 척당 {_m(s['ev_now'])}, 손익분기 선가는 {_m(s['bep'])}예요."]
     if s["recommended"] is not None:
-        band = f" (권장 구간 {_m(s['band_lo'])} ~ {_m(s['band_hi'])})" if s.get("band_hi") is not None else ""
-        lines.append(f"권장 견적가는 {_m(s['recommended'])}{band}예요.")
+        lines.append(f"이익 우선가는 {_m(s['best_quote'])}, 수주 우선가는 {_m(s['recommended'])}예요 "
+                     f"(권장 범위 {_m(s['band_lo'])} ~ {_m(s['band_hi'])}).")
     else:
-        lines.append("이 조건에서는 기대가치가 0 이하라 권장 견적가가 없어요.")
+        lines.append("이 조건에서는 기대가치가 0 이하라 이익 우선가·수주 우선가가 없어요.")
     if active:
-        lines.append(f"기준 조건이었다면 낙찰확률 {_p(b['p_now'])}, 예상 마진 {_p(b['margin_mean_now'], 1)}, 권장 견적가 {_m(b['recommended'])}였어요.")
+        lines.append(f"기준 조건이었다면 낙찰확률 {_p(b['p_now'])}, 예상 마진 {_p(b['margin_mean_now'], 1)}, 이익 우선가 {_m(b['best_quote'])}·수주 우선가 {_m(b['recommended'])}였어요.")
     return lines, _metrics(s), cmp_["source"]
 
 
 # 화면 '주의할 것과 할 일': 시나리오 표의 조건 묶음별 대응 (팀 가정. 문구만 여기서 고친다)
 TODO_BY_GROUP = {
-    "경쟁": "경쟁사 견적 동향을 먼저 확인하고, 권장 구간 하한까지 낮출 여유를 미리 정해 두세요.",
+    "경쟁": "경쟁사 견적 동향을 먼저 확인하고, 수주 우선가까지 낮출 여유를 미리 정해 두세요.",
     "환율": "선물환 헤지 비율을 높이거나 선수금 비중을 키워 환율 하락에 대비하세요.",
     "비용": "후판 선구매나 가격 연동 조항으로 원가 상승을 묶어 두세요.",
     "납기": "공정 여유를 확보하고 계약서의 지체 조건을 확인하세요.",
@@ -432,10 +432,12 @@ LOSS_HIGH = 0.25       # 이 이상이면 '들어갈 만해요'여도 할 일로
 
 
 def verdict_parts(s: dict) -> dict:
-    """결론 한 줄. 견적가가 손익분기 아래 / 권장 구간 아래·위·안 으로 나눈다. 화면 결론 박스와 챗봇이 같이 쓴다.
+    """결론 한 줄. 견적가가 손익분기 아래 / 권장 범위 아래·위·안 으로 나눈다. 화면 결론 박스와 챗봇이 같이 쓴다.
+    이익 우선가 = 기대가치 최고점(best_quote), 수주 우선가 = 권장 범위 하한(recommended = band_lo, A 정책 값 그대로).
     level: stop(따면 손해) · up(올려도 됨) · down(낮추세요) · go(들어갈 만함)"""
     q, lo, hi, bep = s["quote_now"], s.get("band_lo"), s.get("band_hi"), s["bep"]
-    band = f"권장 구간({_m(lo)} ~ {_m(hi)})" if lo is not None else ""
+    band = f"권장 범위({_m(lo)} ~ {_m(hi)})" if lo is not None else ""
+    best = s.get("best_quote")
     if q < bep:
         return {"level": "stop", "head": "따면 손해예요",
                 "text": f"지금 견적가 {_m(q)}는 손익분기 선가 {_m(bep)}보다 낮아서, 따내면 손해예요.",
@@ -447,14 +449,14 @@ def verdict_parts(s: dict) -> dict:
     if q < lo - 0.05:
         return {"level": "up", "head": "견적을 올려도 돼요",
                 "text": f"지금 견적가는 {band}보다 싸요. 견적을 올려도 기대가치가 비슷하거나 더 커요.",
-                "todo": f"견적을 권장가 {_m(lo)} 근처까지 올려 보세요."}
+                "todo": f"견적을 수주 우선가 {_m(lo)} 이상으로 올려 보세요. 이익을 챙기려면 이익 우선가 {_m(best)}까지 올려도 돼요."}
     if q > hi + 0.05:
         return {"level": "down", "head": "낮추세요",
                 "text": f"지금 견적가는 {band}보다 비싸요. 낮추면 낙찰 가능성을 높일 수 있어요.",
-                "todo": f"견적을 {band} 안으로 낮춰 보세요. 하한은 {_m(lo)}예요."}
+                "todo": f"견적을 이익 우선가 {_m(best)}로 낮춰 보세요. 꼭 따야 하면 수주 우선가 {_m(lo)}까지 내려도 돼요."}
     todo = (f"적자확률이 {_p(s['loss_prob_now'])}로 높아요. 환헤지 비율을 높여 환율 하락에 대비해 보세요."
             if s["loss_prob_now"] >= LOSS_HIGH else "지금 견적을 유지하면서 경쟁사 견적과 환율 움직임을 지켜보세요.")
-    return {"level": "go", "head": "이 가격으로 들어갈 만해요", "text": f"지금 견적가는 {band} 안이라 숫자로는 들어갈 만해요.", "todo": todo}
+    return {"level": "go", "head": "이 가격으로 들어갈 만해요", "text": f"지금 견적가는 {band} 안이라 숫자로는 들어갈 만해요. 이익 우선가는 {_m(best)}, 수주 우선가는 {_m(lo)}예요.", "todo": todo}
 
 
 def _verdict(be, bid_id: str, params: dict) -> str:
@@ -586,12 +588,13 @@ def _answer(be, bid_id: str, message: str, prev: dict) -> dict:
     if abs(dec["total"]) >= 0.05:
         main = "낙찰확률이 달라지는 영향" if abs(dec["prob_effect"]) >= abs(dec["profit_effect"]) else "건당 이익이 달라지는 영향"
         lines.append(f"기대가치 변화({dec['total']:+.1f}M)는 주로 {main}이에요.")
-    if abs(s["bep"] - b["bep"]) >= 0.05:   # 권장가가 왜 움직였는지: 원가(손익분기 선가)가 바뀐 경우
+    if abs(s["bep"] - b["bep"]) >= 0.05:   # 이익·수주 우선가가 왜 움직였는지: 원가(손익분기 선가)가 바뀐 경우
         lines.append(f"손익분기 선가가 {_m(b['bep'])} → {_m(s['bep'])}로 {'올라가요' if s['bep'] > b['bep'] else '내려가요'}.")
     if s["recommended"] is None and b["recommended"] is not None:
-        lines.append("이 조건에서는 기대가치가 0 이하라 권장 견적가가 없어요.")
+        lines.append("이 조건에서는 기대가치가 0 이하라 이익 우선가·수주 우선가가 없어요.")
     elif s["recommended"] is not None and b["recommended"] is not None and abs(s["recommended"] - b["recommended"]) >= 0.05:
-        lines.append(f"권장 견적가는 {_m(b['recommended'])} → {_m(s['recommended'])}로 바뀌어요.")
+        lines.append(f"이익 우선가는 {_m(b['best_quote'])} → {_m(s['best_quote'])}, "
+                     f"수주 우선가는 {_m(b['recommended'])} → {_m(s['recommended'])}로 바뀌어요.")
     if s["quote_now"] < s["bep"]:
         lines.append(f"주의: 이 조건에서 견적가 {_m(s['quote_now'])}는 손익분기 선가 {_m(s['bep'])}보다 낮아요. 따내면 손해예요.")
     metrics = _metrics(s)
