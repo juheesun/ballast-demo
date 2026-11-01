@@ -61,3 +61,25 @@ def margin_path(be, bid_id: str, params: Optional[dict] = None) -> dict:
             "milestones": [{"month": int(round(f * m)), "label": lab} for f, lab in MILESTONES],
         }
     return _result_cache[key]
+
+
+def hedge(be, bid_id: str, params: Optional[dict] = None, ratio: float = 0.0) -> dict:
+    """환헤지 계산: 받을 달러의 ratio 만큼을 입찰 시점 환율로 고정하면 인도 시점 마진·적자확률이 어떻게 바뀌나.
+
+      마진 = 1 − (1 + 원가초과) × 손익분기선가 ÷ (견적가 × (헤지비율 + (1 − 헤지비율) × 환율변화))
+
+    헤지 비용(선물환 포인트)은 0으로 가정한다. 헤지 0% 이면 카드의 '예상 마진'·'적자 확률'과 같다.
+    버틸 수 있는 환율 = 헤지하지 않은 부분만으로 손익분기를 맞추는 환율. 헤지가 충분하면 없음(None).
+    """
+    s = be.curve(bid_id, params)["summary"]
+    months, q, bep, fx = int(round(s["months"])), s["quote_now"], s["bep"], s["fx_assumed"]
+    g, ov = _paths(be.mm, months)
+    r = lambda v: round(float(v), 4)
+
+    def one(h: float) -> dict:
+        m = 1.0 - (1.0 + ov) * bep / (q * (h + (1.0 - h) * g[:, -1]))
+        x = (bep / q - h) / (1.0 - h) if h < 1 else 0.0
+        return {"ratio": r(h), "loss_prob": r((m < 0).mean()), "margin_mean": r(m.mean()),
+                "margin_p10": r(np.percentile(m, 10)), "margin_p90": r(np.percentile(m, 90)),
+                "fx_breakeven": s["fx_breakeven"] if h == 0 else (round(x * fx, 1) if x > 0 else None)}
+    return {"source": be.source, "bid_id": bid_id, "fx_assumed": fx, "none": one(0.0), "hedged": one(float(ratio))}

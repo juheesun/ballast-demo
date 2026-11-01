@@ -20,6 +20,8 @@ export const api = {
   compare: (bidId, scenario) => request('/api/scenario/compare', json({ bid_id: bidId, scenario })),
   chat: (bidId, message, params) => request('/api/chat', json({ bid_id: bidId, message, params })),
   marginPath: (bidId, scenario) => request('/api/scenario/margin-path', json({ bid_id: bidId, scenario })),
+  advice: (bidId, scenario) => request('/api/scenario/advice', json({ bid_id: bidId, scenario })),
+  hedge: (bidId, scenario, ratio) => request('/api/scenario/hedge', json({ bid_id: bidId, scenario, ratio })),
   history: () => request('/api/history'),
   scenarioTable: (bidId) => request(`/api/bids/${bidId}/scenario-table`),
 }

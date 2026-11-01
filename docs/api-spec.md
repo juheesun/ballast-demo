@@ -63,7 +63,18 @@
 응답: `params`(누적된 조건), `active`/`understood`(칩 문구), `lines`(답변 문장), `metrics`(낙찰확률·예상 마진·적자확률), `notes`(지원하지 않는 질문 안내), `changed`
 - 새 문장에 나온 조건만 덮어쓰고 나머지는 유지한다. "초기화"라고 하면 모두 기준으로 돌아간다.
 - 알아듣는 조건: 경쟁사 견적(%) · 후판가(%) · 환율(% 또는 원) · 납기 지연(개월) · 우리 견적가(%)
-- 환헤지·납기 단축·선주/사양 질문은 계산하지 않고 `notes` 로 이유를 알린다.
+- 납기 단축·선주/사양 질문은 계산하지 않고 `notes` 로 이유를 알린다.
+- "대금 50%를 환헤지하면?"처럼 헤지 비율을 말하면 조건은 그대로 두고 헤지 결과를 답한다.
+- 응답에 `todo`(답 끝 "이렇게 해 보세요" 한 줄) 추가.
+
+### POST /api/scenario/advice  (MVP2 · 결론 박스)
+요청은 `/api/scenario/compare` 와 같다. 응답: `verdict`(`level`: stop·up·down·go, `head` 결론 한 줄, `text`, `todo`),
+`fx_breakeven`(버틸 수 있는 환율), `fx_assumed`, `fx_gap`, `watch`(시나리오 표에서 기대가치가 가장 많이 줄어드는 조건 2개, 묶음별 1개씩 + 대응 `todo`).
+판단 기준은 `backend/chat.py` 의 `verdict_parts()` (견적가 < 손익분기 → 손해, 아니면 권장 구간 아래·위·안).
+
+### POST /api/scenario/hedge  (MVP2 · 환헤지 계산)
+요청: `{ "bid_id", "scenario": {...}, "ratio": 0.5 }`. 응답: `none`(헤지 없음)·`hedged`(헤지 적용) 각각 `loss_prob, margin_mean, margin_p10, margin_p90, fx_breakeven`.
+받을 달러의 ratio 만큼을 지금 조건의 환율로 고정한다고 보고, 헤지 비용은 0으로 가정한다. 계산은 `backend/margin_path.py`.
 
 ### 시나리오 조건에 `quote_pct` 추가
 `/api/scenario/compare` 의 `scenario` 와 `/api/bids/{id}/curve` 에 `quote_pct`(-0.3~0.3). 곡선은 그대로 두고 제안가 위치만 옮겨 그 견적가의 낙찰확률·기대가치를 읽는다.

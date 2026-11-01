@@ -8,8 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from .engine import Backend, PRESETS
-from .chat import answer
-from .margin_path import margin_path
+from .chat import answer, advice
+from .margin_path import margin_path, hedge
 
 app = FastAPI(title="견적 리스크 매니저 API", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -72,6 +72,24 @@ def scenario_margin_path(body: CompareIn):
     """MVP2 · 계약~인도 달마다 마진 범위(10·50·90%)와 적자 확률. 기준 vs 시나리오. 계산은 backend/margin_path.py"""
     _check(body.bid_id)
     return margin_path(be, body.bid_id, body.scenario.model_dump())
+
+
+class HedgeIn(CompareIn):
+    ratio: float = Field(0.0, ge=0, le=1, description="받을 달러 중 입찰 시점 환율로 고정하는 비율")
+
+
+@app.post("/api/scenario/advice")
+def scenario_advice(body: CompareIn):
+    """MVP2 · 결론 박스(chat.verdict_parts) · 버틸 수 있는 환율 · 주의할 것과 할 일"""
+    _check(body.bid_id)
+    return advice(be, body.bid_id, body.scenario.model_dump())
+
+
+@app.post("/api/scenario/hedge")
+def scenario_hedge(body: HedgeIn):
+    """MVP2 · 환헤지 비율별 적자확률·예상 마진·버틸 수 있는 환율. 계산은 backend/margin_path.py"""
+    _check(body.bid_id)
+    return hedge(be, body.bid_id, body.scenario.model_dump(), body.ratio)
 
 
 @app.get("/api/bids/{bid_id}/scenario-table")

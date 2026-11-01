@@ -33,7 +33,7 @@ function Tip({ active, payload, hasBase }) {
     <div style={{ background: '#fff', border: `1px solid ${RULE}`, borderRadius: 8, boxShadow: '0 4px 14px rgba(15,26,46,.12)', padding: '8px 12px', fontSize: 12.5, lineHeight: 1.6 }}>
       <div style={{ fontWeight: 600 }}>계약 후 {r.month}개월{r.label ? ` · ${r.label}` : ''}</div>
       {r.p50 != null && (
-        <div style={{ color: '#4b5260' }}>마진 중앙 {pc(r.p50)} · 범위 {pc(r.p10)}~{pc(r.p90)} · 적자 확률 {pc(r.loss, 0)}</div>
+        <div style={{ color: '#4b5260' }}>마진 중앙 {pc(r.p50)} · 범위 {pc(r.p10)}~{pc(r.p90)} · 적자확률 {pc(r.loss, 0)}</div>
       )}
       {hasBase && r.base_p50 != null && <div style={{ color: MUTED }}>기준 조건 중앙 {pc(r.base_p50)}</div>}
     </div>
