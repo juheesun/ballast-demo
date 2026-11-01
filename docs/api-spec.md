@@ -128,4 +128,10 @@
 응답: `assumptions`(적용된 값), `summary`(적자확률·예상 마진·`fx_breakeven`·`krw_cost_share`·`safe_quote` 등), `grid`(견적가별 적자확률·마진 범위),
 `money`(억 원: 척당/전체 척 이익, 실행원가와 항목별 금액, 안전 시작 견적가), `simple`(예전 가정의 적자확률·손익분기 환율),
 `decision`(`raise`: 견적가를 올려 기준을 맞출 때 / `hedge`: 헤지로 맞출 때 필요한 비율), `backtest`(2010년 이후 납기 길이 구간에서 실제 환율이 시뮬레이션 10~90% 범위에 든 비율).
-가정을 (원화 100%, 인도 100%, 헤지 0)으로 두면 `/curve` 의 적자확률·마진과 정확히 같다.
+가정을 (원화 100%, 인도 100%, 헤지 0)으로 두면 예전 MarginModel 결과(`simple`)와 정확히 같다.
+
+### 환율·원가 위험 계산 통일 (v0.4)
+`/curve`·`/scenario/compare`·`scenario-table`·`/chat`·`/scenario/margin-path`·`/scenario/hedge` 의 적자확률·예상 마진·`fx_breakeven` 도
+견적리스크와 같은 기본 가정(원가 통화 구분·대금 분할, 헤지 0)으로 계산한다 (`quote_risk.apply_defaults`). 두 화면의 숫자가 같다.
+`summary` 에 예전 가정 값 `loss_prob_simple`·`fx_breakeven_simple`, 원화 원가 비중 `krw_cost_share` 를 함께 준다.
+`fx_breakeven` 이 `null` 이면 환율이 입찰 시점의 절반 아래로 내려가도 적자가 나지 않는다는 뜻이다.

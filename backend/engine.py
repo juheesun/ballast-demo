@@ -139,7 +139,8 @@ class Backend:
             payload = self._payload(bid_id, sc, self.eng.evaluate(bid_id, sc, lo=lo, hi=hi))
             if quote_pct:
                 payload = self._move_quote(payload, quote_pct)
-            self._cache[key] = payload
+            from .quote_risk import apply_defaults       # 원가 통화·대금 분할 기본 가정 (순환 import 를 피해 여기서 부른다)
+            self._cache[key] = apply_defaults(self, bid_id, payload)
         return self._cache[key]
 
     @staticmethod

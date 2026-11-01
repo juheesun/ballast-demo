@@ -10,8 +10,9 @@ modeling/ 의 MarginModel 은 '원가 전부 원화 · 대금은 인도 때 한 
 · 달러로 사는 원가(수입 엔진·기자재)는 환율이 내리면 같이 싸지므로 환율 위험은 원화 원가에만 걸린다.
 · 헤지는 받을 달러의 일부를 입찰 시점 환율로 고정한다고 본다 (선물환 포인트·수수료는 0으로 가정).
 · 원가 비중·달러 비중·분할 비율·헤지 비율은 전부 팀 가정이고, 화면에서 '가정' 배지로 바로 고칠 수 있다.
-· 원가 비중·분할 비율·헤지 0%를 (원화 100%, 인도 100%)로 두면 MarginModel 결과와 정확히 같다.
+· 원가 비중·분할 비율·헤지 0%를 (원화 100%, 인도 100%)로 두면 MarginModel 결과와 정확히 같다 (응답의 simple).
 · 낙찰확률·기대가치·권장가는 엔진(backend/engine.py) 값을 그대로 쓴다. 기대가치 공식에는 환율이 들어가지 않는다.
+· 엔진 곡선(/curve·/compare·시나리오 표·챗봇)도 apply_defaults() 로 기본 가정을 적용한다 → 두 화면의 적자확률이 같다.
 """
 from __future__ import annotations
 import json
@@ -31,10 +32,11 @@ COST_USD = {"steel": 0.0, "labor": 0.0, "equip": 0.6, "etc": 0.2}     # 항목 �
 USD_COST_AT = 0.5                 # 달러 원가를 치르는 시점 (납기 대비, 0.5 = 중간 탑재 무렵)
 # 대금 분할 기본값: 계약·착공·진수·인도에 20/20/20/40. at = 납기 대비 받는 시점
 MILESTONES = [("contract", "계약", 0.0, 0.2), ("start", "착공", 0.25, 0.2), ("launch", "진수", 0.75, 0.2), ("delivery", "인도", 1.0, 0.4)]
+FX_FLOOR = 0.5                    # 버틸 수 있는 환율이 입찰 환율의 절반 아래면 '사실상 없음'(None)으로 본다
 LOSS_TARGET = 0.10                # '안전 시작 견적가' 기준: 적자확률이 이 값 이하가 되는 가장 낮은 견적가
 BACKTEST_FROM = "2010-01"
 
-_paths_cache: dict = {}
+_sim_cache: dict = {}
 _ship_cache: dict = {}
 
 
@@ -85,20 +87,20 @@ def _merge(bid_id: str, a: Optional[dict]) -> tuple:
     return d, notes
 
 
-def _paths(mm, months: int):
+def sim_paths(mm, months: int):
     """MarginModel.shocks() 와 같은 난수 순서. 달마다의 누적 환율 변화 g(t) (n, months+1) 와 원가 초과를 돌려준다."""
     months = max(int(months), 1)
     key = (id(mm), months)
-    if key not in _paths_cache:
+    if key not in _sim_cache:
         rng = np.random.default_rng(mm.seed)
         r = rng.choice(mm.fx_returns, size=(mm.n_sims, months), replace=True)
         ov = rng.choice(mm.cost_overrun_values, size=mm.n_sims, p=mm.cost_overrun_probs)
         g = np.exp(np.concatenate([np.zeros((mm.n_sims, 1)), np.cumsum(r, axis=1)], axis=1))
-        _paths_cache[key] = (g, ov)
-    return _paths_cache[key]
+        _sim_cache[key] = (g, ov)
+    return _sim_cache[key]
 
 
-def _factors(g, ov, months: int, a: dict, hedge: float):
+def factors(g, ov, months: int, a: dict, hedge: float):
     """시뮬레이션마다의 원가 배수 C 와 매출 배수 R (둘 다 '입찰 시점 환율·원가초과 0' 이면 1)."""
     usd = sum(c["share"] * c["usd_share"] for c in a["costs"])
     g_pay = g[:, int(round(USD_COST_AT * months))]
@@ -107,16 +109,17 @@ def _factors(g, ov, months: int, a: dict, hedge: float):
     return C, R, usd
 
 
-def _fx_breakeven(q: float, bep: float, usd: float, a: dict, hedge: float, fx0: float) -> Optional[float]:
+def breakeven_fx(q: float, bep: float, usd: float, a: dict, hedge: float, fx0: float) -> Optional[float]:
     """환율이 입찰 직후 F 로 옮겨 가 계속 머문다면, 마진이 0 이 되는 F. (계약금은 이미 입찰 환율로 받는다)
-    w0 + (1−w0)(h + (1−h)x) = (BEP/q)·((1−u) + u·x)  →  x = F / 입찰환율"""
+    w0 + (1−w0)(h + (1−h)x) = (BEP/q)·((1−u) + u·x)  →  x = F / 입찰환율
+    환율이 절반 넘게 내려가야 적자인 경우(헤지·달러 원가로 거의 다 막힘)는 None."""
     w0 = sum(m["weight"] for m in a["milestones"] if m["at"] <= 0)
     k = bep / q
     slope = (1 - w0) * (1 - hedge) - k * usd
     if slope <= 1e-9:
         return None                              # 환율이 아무리 내려도 적자가 나지 않음 (헤지·달러 원가로 다 막힘)
     x = (k * (1 - usd) - w0 - (1 - w0) * hedge) / slope
-    return None if x <= 0 else x * fx0
+    return None if x <= FX_FLOOR else x * fx0
 
 
 def _backtest(mm, months: int) -> dict:
@@ -124,7 +127,7 @@ def _backtest(mm, months: int) -> dict:
     fx = json.load(open(bc.FX_HISTORY, encoding="utf-8"))["monthly"]
     fx = sorted((r for r in fx if r["year_month"] >= BACKTEST_FROM), key=lambda r: r["year_month"])
     s = np.array([r["usd_krw"] for r in fx])
-    g, _ = _paths(mm, months)
+    g, _ = sim_paths(mm, months)
     lo, hi = np.percentile(g[:, -1], [10, 90])
     if len(s) <= months:
         return {"n": 0, "months": months}
@@ -134,15 +137,37 @@ def _backtest(mm, months: int) -> dict:
             "below": _r((actual < lo).mean()), "above": _r((actual > hi).mean()), "target": 0.8}
 
 
+def apply_defaults(be, bid_id: str, payload: dict) -> dict:
+    """엔진 곡선 응답의 환율·원가 위험 값(적자확률·마진·버틸 수 있는 환율)을 기본 가정으로 다시 계산한다.
+    반사실 화면·챗봇도 견적리스크 화면과 같은 적자확률을 쓰게 하려는 것. 예전 가정 값은 *_simple 로 남긴다."""
+    a, _ = _merge(bid_id, None)
+    s, grid = payload["summary"], payload["grid"]
+    months, bep, fx = int(round(s["months"])), float(s["bep"]), float(s["fx_assumed"])
+    g, ov = sim_paths(be.mm, months)
+    C, R, usd = factors(g, ov, months, a, a["hedge"])
+    quotes = np.array([r["quote"] for r in grid])
+    margin = 1.0 - (bep * C)[None, :] / (quotes[:, None] * R[None, :])
+    p10, p50, p90 = np.percentile(margin, [10, 50, 90], axis=1)
+    profit = (quotes[:, None] * R[None, :] - bep * C[None, :]).mean(axis=1)
+    for i, r in enumerate(grid):
+        r.update(loss_prob=_r((margin[i] < 0).mean()), margin_mean=_r(margin[i].mean()), margin_p10=_r(p10[i]),
+                 margin_p50=_r(p50[i]), margin_p90=_r(p90[i]), ev_risk=_r(r["p"] * profit[i], 3))
+    q = float(s["quote_now"])
+    m = 1.0 - bep * C / (q * R)
+    s.update(loss_prob_simple=s["loss_prob_now"], fx_breakeven_simple=s["fx_breakeven"],
+             loss_prob_now=_r((m < 0).mean()), margin_mean_now=_r(m.mean()),
+             fx_breakeven=_r(breakeven_fx(q, bep, usd, a, a["hedge"], fx), 1), krw_cost_share=_r(1 - usd))
+    return payload
+
+
 def evaluate(be, bid_id: str, assumptions: Optional[dict] = None) -> dict:
     a, notes = _merge(bid_id, assumptions)
     cur = be.curve(bid_id)                                       # 낙찰확률·기대가치·권장가 (엔진 값)
     s0, grid0 = cur["summary"], cur["grid"]
-    raw = be.raw.loc[bid_id]
-    fx0, bep, months = float(raw.expected_fx), float(s0["bep"]), int(round(s0["months"]))
+    fx0, bep, months = float(s0["fx_assumed"]), float(s0["bep"]), int(round(s0["months"]))
     q_now, hedge, target = float(s0["quote_now"]), a["hedge"], a["loss_target"]
-    g, ov = _paths(be.mm, months)
-    C, R, usd = _factors(g, ov, months, a, hedge)
+    g, ov = sim_paths(be.mm, months)
+    C, R, usd = factors(g, ov, months, a, hedge)
     ship = ship_info(bid_id)
     eok = fx0 / 100                                              # $M → 억 원 (입찰 시점 환율)
 
@@ -157,7 +182,7 @@ def evaluate(be, bid_id: str, assumptions: Optional[dict] = None) -> dict:
              "margin_p50": _r(p50[i]), "margin_p90": _r(p90[i])} for i, r in enumerate(grid0)]
 
     def at_quote(q: float, h: float = hedge) -> np.ndarray:
-        Ch, Rh, _ = _factors(g, ov, months, a, h)
+        Ch, Rh, _ = factors(g, ov, months, a, h)
         return 1.0 - bep * Ch / (q * Rh)
 
     m_now = at_quote(q_now)
@@ -184,7 +209,7 @@ def evaluate(be, bid_id: str, assumptions: Optional[dict] = None) -> dict:
                              "margin_p10": _r(np.percentile(mh, 10)), "margin_p90": _r(np.percentile(mh, 90))}
                 break
     # 비교용: 예전 가정(원가 전부 원화 · 인도 때 일시 수령 · 헤지 없음)
-    simple = {"loss_prob": s0["loss_prob_now"], "fx_breakeven": _r(bep * fx0 / q_now, 1)}
+    simple = {"loss_prob": s0["loss_prob_simple"], "fx_breakeven": s0["fx_breakeven_simple"]}
 
     prof_ship = (q_now * R - bep * C) * eok                                 # 척당 이익 (억 원, 시뮬레이션별)
     cost_total = bep * eok
@@ -193,7 +218,7 @@ def evaluate(be, bid_id: str, assumptions: Optional[dict] = None) -> dict:
     summary.update(months=months, fx_assumed=_r(fx0, 1), loss_prob_now=_r(loss_now), margin_mean_now=_r(m_now.mean()),
                    margin_p10_now=_r(np.percentile(m_now, 10)), margin_p90_now=_r(np.percentile(m_now, 90)),
                    ev_risk_now=_r(s0["p_now"] * float((q_now * R - bep * C).mean()), 3),
-                   fx_breakeven=_r(_fx_breakeven(q_now, bep, usd, a, hedge, fx0), 1),
+                   fx_breakeven=_r(breakeven_fx(q_now, bep, usd, a, hedge, fx0), 1),
                    krw_cost_share=_r(1 - usd), safe_quote=_r(safe, 2),
                    safe_ratio=_r(safe / (q_now / s0["ratio_now"])) if safe is not None else None)
     money = {"fx": _r(fx0, 1), "num_ships": ship["num_ships"], "quote_krw": _r(q_now * eok, 0),

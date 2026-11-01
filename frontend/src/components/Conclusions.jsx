@@ -41,7 +41,7 @@ export function buildVerdicts(data) {
   // 4. 환율 위험 (원가 통화·대금 분할·헤지 반영)
   const lp = s.loss_prob_now
   const fxText = s.fx_breakeven == null
-    ? '헤지·달러 원가로 환율 하락은 다 막혀서, 남은 위험은 원가 초과뿐입니다.'
+    ? '헤지·달러 원가 덕분에 환율이 절반으로 내려가도 적자가 나지 않습니다. 남은 위험은 원가 초과입니다.'
     : `환율이 ${krw(s.fx_breakeven)}(입찰 시점 대비 ${signed((s.fx_breakeven / s.fx_assumed - 1) * 100, 1, '%')}) 아래로 내려가 머물면 적자입니다.`
   out.push({ k: '환율·원가 위험', v: `적자확률 ${pct(lp, 0)}`,
     tag: lp >= LOSS_WARN ? ['warn', '높음'] : lp >= LOSS_MID ? ['mid', '보통'] : ['ok', '낮음'],

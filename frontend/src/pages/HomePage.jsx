@@ -104,7 +104,7 @@ function DecisionCard({ data, onHedge }) {
         <ul className="okfacts">
           <li>버틸 수 있는 환율: {s.fx_breakeven != null
             ? <><b>{krw(s.fx_breakeven)}</b> (입찰 시점 대비 {signed((s.fx_breakeven / s.fx_assumed - 1) * 100, 1, '%')}) 아래로 내려가 머물면 적자</>
-            : <b>환율 하락으로는 적자가 나지 않음</b>}</li>
+            : <b>환율이 절반으로 내려가도 적자가 나지 않음</b>}</li>
           {s.safe_quote != null && s.safe_quote < s.quote_now && (
             <li>견적을 <b>{usd(s.safe_quote)}</b>까지 낮춰도 적자확률 {tgt} 이하를 지켜요 (지금보다 {usd(s.quote_now - s.safe_quote)} 여유).</li>
           )}

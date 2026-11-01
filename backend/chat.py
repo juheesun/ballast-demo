@@ -479,7 +479,7 @@ def _hedge_lines(be, bid_id: str, params: dict, h: float) -> tuple:
     if b["loss_prob"] > a["loss_prob"]:                     # 평균 마진이 마이너스면 헤지가 '운 좋게 환율이 오르는 경우'까지 막는다
         lines.append("예상 마진이 마이너스라 헤지로는 위험이 줄지 않아요. 환율이 올라 손해를 메울 기회까지 막혀 적자확률이 오히려 올라가요. 견적가를 먼저 올려야 해요.")
     elif b["fx_breakeven"] is None:
-        lines.append("이만큼 헤지하면 환율이 내려가도 적자가 나지 않아요. 남는 위험은 원가 초과예요.")
+        lines.append("이만큼 헤지하면 환율이 절반으로 내려가도 적자가 나지 않아요. 남는 위험은 원가 초과예요.")
     elif a["fx_breakeven"] is not None:
         lines.append(f"버틸 수 있는 환율은 {a['fx_breakeven']:,.0f}원 → {b['fx_breakeven']:,.0f}원이 돼요.")
     lines.append("대신 환율이 올라도 헤지한 만큼은 이익을 못 봐요. (헤지 비용은 0으로 가정)")

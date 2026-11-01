@@ -157,11 +157,11 @@ export default function ScenarioPage() {
                   {adv && (
                     <section className="card card-pad">
                       <h2 className="card-title">버틸 수 있는 환율<span className="unit">인도 시점 원/달러</span></h2>
-                      <div className="big">{adv.fx_breakeven != null ? krw(adv.fx_breakeven) : '–'}</div>
+                      <div className="big">{adv.fx_breakeven != null ? krw(adv.fx_breakeven) : '사실상 없음'}</div>
                       <p className="card-note">
-                        {adv.fx_gap == null ? '계산할 수 없어요.'
+                        {adv.fx_gap == null ? '환율이 절반으로 내려가도 이 견적가로는 적자가 나지 않아요.'
                           : adv.fx_gap < 0
-                            ? `지금 조건의 환율 ${krw(adv.fx_assumed)}보다 ${pct(-adv.fx_gap, 1)} 낮아요. 인도 시점 환율이 이 아래로 내려가면 이 견적가로는 적자예요.`
+                            ? `지금 조건의 환율 ${krw(adv.fx_assumed)}보다 ${pct(-adv.fx_gap, 1)} 낮아요. 환율이 이 아래로 내려가 인도 때까지 머물면 이 견적가로는 적자예요.`
                             : `이미 지금 조건의 환율 ${krw(adv.fx_assumed)}보다 ${pct(adv.fx_gap, 1)} 높아요. 환율이 그만큼 올라야 겨우 본전이에요.`}
                       </p>
                     </section>
@@ -178,7 +178,7 @@ export default function ScenarioPage() {
                           <tr><td>적자확률</td><td>{pct(hedge.none.loss_prob, 0)}</td><td className={hedge.hedged.loss_prob > hedge.none.loss_prob ? 'neg' : 'pos'}><b>{pct(hedge.hedged.loss_prob, 0)}</b></td></tr>
                           <tr><td>예상 마진</td><td>{pct(hedge.none.margin_mean, 1)}</td><td>{pct(hedge.hedged.margin_mean, 1)}</td></tr>
                           <tr><td>마진 범위 (10~90%)</td><td>{pct(hedge.none.margin_p10, 1)} ~ {pct(hedge.none.margin_p90, 1)}</td><td>{pct(hedge.hedged.margin_p10, 1)} ~ {pct(hedge.hedged.margin_p90, 1)}</td></tr>
-                          <tr><td>버틸 수 있는 환율</td><td>{krw(hedge.none.fx_breakeven)}</td><td>{hedge.hedged.fx_breakeven != null ? krw(hedge.hedged.fx_breakeven) : '하락해도 적자 없음'}</td></tr>
+                          <tr><td>버틸 수 있는 환율</td><td>{hedge.none.fx_breakeven != null ? krw(hedge.none.fx_breakeven) : '사실상 없음'}</td><td>{hedge.hedged.fx_breakeven != null ? krw(hedge.hedged.fx_breakeven) : '사실상 없음'}</td></tr>
                         </tbody>
                       </table>
                       <p className="card-note">
@@ -241,6 +241,7 @@ export default function ScenarioPage() {
                 <p className="card-note">
                   {health?.source === 'mock' ? '낙찰확률 모델이 연결되기 전의 예시 계산입니다. ' : ''}
                   경쟁사·후판가·환율 조건의 반영 방식은 학습이 아니라 팀이 정한 규칙입니다. 발표에서 가정이라고 밝혀야 합니다.
+                  예상 마진·적자확률은 견적리스크 화면과 같은 기본 가정(원가 중 원화 비중·대금 분할 20/20/20/40, 헤지 없음)으로 계산합니다.
                 </p>
                 <details className="evidence">
                   <summary>근거 보기 · 전체 조건 표와 계약~인도 마진 범위</summary>
@@ -260,7 +261,7 @@ export default function ScenarioPage() {
                           인도 시점({path.scenario.months}개월) 마진 범위 <b>{range(ps)}</b>, 적자확률 <b>{pct(ps.loss_prob, 0)}</b>
                           {moved && <> (기준 {path.base.months}개월: {range(pb)}, 적자 {pct(pb.loss_prob, 0)})</>}
                         </p>
-                        <p className="card-note">{`주황 띠는 환율·원가 시뮬레이션 10~90% 범위, 주황 선은 중앙값${moved ? ', 회색 점선은 기준 조건의 중앙값' : ''}입니다. 공정 이름은 납기를 4등분한 표시이고, 원가 초과는 건조가 진행되며 조금씩 반영된다고 가정했습니다.`}</p>
+                        <p className="card-note">{`주황 띠는 환율·원가 시뮬레이션 10~90% 범위, 주황 선은 중앙값${moved ? ', 회색 점선은 기준 조건의 중앙값' : ''}입니다. 공정 이름은 납기를 4등분한 표시입니다. 달마다 아직 안 받은 대금과 아직 안 산 달러 원가를 그 시점 환율로 정산한다고 보고, 원가 초과는 건조가 진행되며 조금씩 반영된다고 가정했습니다.`}</p>
                       </div>
                     )
                   })()}
