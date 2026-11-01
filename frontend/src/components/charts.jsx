@@ -95,6 +95,7 @@ export function EvChart({ data, base = null, height = 380 }) {
         <ReferenceLine x={nowX} stroke={INK} strokeWidth={1.4} label={{ value: '견적가', position: recLeft ? 'insideTopRight' : 'insideTopLeft', fill: INK, fontSize: 11.5, dy: -16 }} />
         {base && <Line dataKey="base_ev" stroke={BASE} strokeWidth={1.5} strokeDasharray="5 4" dot={false} isAnimationActive={false} />}
         <Line dataKey="ev" stroke={LINE} strokeWidth={2.4} dot={false} isAnimationActive={false} />
+        <ReferenceDot x={nowX} y={s.ev_now} r={5} fill={INK} stroke="#fff" strokeWidth={2} ifOverflow="extendDomain" />
         {rec && <ReferenceDot x={rec.x} y={rec.ev} r={5.5} fill={ACCENT} stroke="#fff" strokeWidth={1.5}
           label={{ value: `권장가 ${usd(s.recommended)}`, position: recLeft ? 'top' : 'top', fill: ACCENT, fontSize: 12, fontWeight: 600, dy: -4 }} />}
         <Tooltip cursor={{ stroke: INK, strokeWidth: 0.8 }} content={<Tip extra={(r) => (
@@ -150,6 +151,7 @@ export function LossChart({ data, target = null, safe = null, height = 300 }) {
         <Area dataKey="loss" stroke={LOSS} strokeWidth={2} fill={LOSS} fillOpacity={0.1} isAnimationActive={false} />
         {target != null && <ReferenceLine y={target * 100} stroke={MUTED} strokeDasharray="4 3" label={{ value: `기준 ${(target * 100).toFixed(0)}%`, position: 'insideTopLeft', fill: MUTED, fontSize: 11.5 }} />}
         {safe != null && <ReferenceLine x={xOfQuote(s, safe)} stroke={ACCENT} strokeDasharray="4 3" ifOverflow="hidden" />}
+        <ReferenceDot x={toX(s.ratio_now)} y={s.loss_prob_now * 100} r={5} fill={INK} stroke="#fff" strokeWidth={2} />
         <ReferenceLine x={toX(s.ratio_now)} stroke={INK} strokeWidth={1.2} label={{ value: `견적가 ${(s.loss_prob_now * 100).toFixed(0)}%`, position: 'insideTopRight', fill: INK, fontSize: 11.5, dy: 2 }} />
         <Tooltip cursor={{ stroke: INK, strokeWidth: 0.8 }} content={<Tip extra={(r) => <div style={{ color: '#4b5260' }}>적자확률 {r.loss.toFixed(1)}%</div>} />} />
       </ComposedChart>

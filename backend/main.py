@@ -58,6 +58,7 @@ class RiskIn(BaseModel):
     milestones: Optional[List[MilestoneIn]] = None
     hedge: float = Field(0.0, ge=0, le=1, description="받을 달러 중 선물환으로 고정하는 비율")
     loss_target: float = Field(0.10, gt=0, lt=1, description="안전 시작 견적가 기준 적자확률")
+    quote: Optional[float] = Field(None, gt=0, description="이 견적가($M)로 다시 계산 (화면 슬라이더). 비우면 입찰 견적가")
 
 
 def _check(bid_id: str):

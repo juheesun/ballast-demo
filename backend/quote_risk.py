@@ -227,8 +227,12 @@ def fx_verdict(q: float, bep: float, loss: float, target: float, fx_be: Optional
 
 
 def evaluate(be, bid_id: str, assumptions: Optional[dict] = None) -> dict:
+    """assumptions["quote"] 를 주면 그 견적가($M)로 모든 값을 다시 계산한다 (화면의 견적가 슬라이더)."""
     a, notes = _merge(bid_id, assumptions)
-    cur = be.curve(bid_id)                                       # 낙찰확률·기대가치·권장가 (엔진 값)
+    q_orig = float(be.raw.loc[bid_id].quote)
+    q_try = (assumptions or {}).get("quote")
+    params = {"quote_pct": round(min(max(q_try / q_orig - 1, -0.3), 0.3), 4)} if q_try else None
+    cur = be.curve(bid_id, params)                               # 낙찰확률·기대가치·권장가 (엔진 값, 슬라이더 견적가 기준)
     s0, grid0 = cur["summary"], cur["grid"]
     fx0, bep, months = float(s0["fx_assumed"]), float(s0["bep"]), int(round(s0["months"]))
     q_now, hedge, target = float(s0["quote_now"]), a["hedge"], a["loss_target"]
@@ -295,7 +299,7 @@ def evaluate(be, bid_id: str, assumptions: Optional[dict] = None) -> dict:
     cost_total = bep * eok
     summary = {k: s0[k] for k in ("quote_now", "ratio_now", "bep", "bep_ratio", "p_now", "ev_now", "best_quote",
                                   "band_lo", "band_hi", "recommended", "recommended_below_bep")}
-    summary.update(months=months, fx_assumed=_r(fx0, 1), loss_prob_now=_r(loss_now), margin_mean_now=_r(m_now.mean()),
+    summary.update(quote_orig=_r(q_orig, 2), months=months, fx_assumed=_r(fx0, 1), loss_prob_now=_r(loss_now), margin_mean_now=_r(m_now.mean()),
                    margin_p10_now=_r(np.percentile(m_now, 10)), margin_p90_now=_r(np.percentile(m_now, 90)),
                    ev_risk_now=_r(s0["p_now"] * float((q_now * R - bep * C).mean()), 3),
                    fx_breakeven=_r(breakeven_fx(q_now, bep, usd, a, hedge, fx0), 1),

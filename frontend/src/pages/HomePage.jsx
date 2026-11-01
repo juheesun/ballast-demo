@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { useBid } from '../context.js'
 import { useAsync } from '../hooks.js'
-import { usd, pct, krw, eok, signed } from '../format.js'
+import { usd, pct, krw, eok, signed, vsMarket } from '../format.js'
 import BidBar from '../components/BidBar.jsx'
 import StatStrip from '../components/Stat.jsx'
 import Figure from '../components/Figure.jsx'
@@ -174,33 +174,76 @@ function DecisionCard({ data, onHedge }) {
   )
 }
 
+// 견적가 슬라이더: 움직이면 아래 숫자·결론·그래프의 현재 위치가 모두 그 견적가 기준으로 다시 계산된다.
+// 트랙 색: 빗금 = 손익분기 아래, 파란 띠 = 권장 구간
+function QuoteSlider({ data, value, onChange }) {
+  const s = data.summary, g = data.grid
+  const lo = g[0].quote, hi = g[g.length - 1].quote, market = s.quote_now / s.ratio_now
+  const [draft, setDraft] = useState(value)
+  useEffect(() => { setDraft(value) }, [value])
+  const at = (q) => `${((q - lo) / (hi - lo)) * 100}%`
+  const bands = [`var(--line-2) 0%`]
+  if (s.bep > lo) bands.splice(0, 1, `#f6dcd8 0%`, `#f6dcd8 ${at(s.bep)}`, `var(--line-2) ${at(s.bep)}`)
+  if (s.band_lo != null) bands.push(`var(--line-2) ${at(s.band_lo)}`, `var(--band) ${at(s.band_lo)}`, `var(--band) ${at(s.band_hi)}`, `var(--line-2) ${at(s.band_hi)}`)
+  bands.push('var(--line-2) 100%')
+  const d = draft - s.quote_orig
+  return (
+    <section className="card card-pad qslider">
+      <div className="qs-top">
+        <div>
+          <div className="qs-k">견적가 <Info text="슬라이더로 견적가를 바꿔 보세요. 결론·숫자·판단 요약·그래프의 현재 위치가 모두 이 견적가 기준으로 다시 계산됩니다." /></div>
+          <div className="qs-v">{usd(draft, 1)} <span>{eok(draft * data.money.fx / 100)}</span></div>
+        </div>
+        <div className="qs-side">
+          <div>시장 기준가 대비 <b>{vsMarket(draft / market)}</b></div>
+          <div className="muted">{Math.abs(d) < 0.05 ? '입찰 견적가 그대로' : `입찰 견적가 ${usd(s.quote_orig)} 대비 ${signed(d, 1, 'M')}`}</div>
+        </div>
+      </div>
+      <input type="range" min={lo} max={hi} step={0.1} value={draft} style={{ background: `linear-gradient(to right, ${bands.join(', ')})` }}
+        onChange={(e) => setDraft(Number(e.target.value))} onMouseUp={() => onChange(draft)} onTouchEnd={() => onChange(draft)} onKeyUp={() => onChange(draft)}
+        aria-label="견적가" />
+      <div className="qs-ends">
+        <span>{usd(lo, 0)} (공격적)</span>
+        <span className="qs-btns">
+          {s.recommended != null && <button type="button" className="btn" onClick={() => onChange(s.recommended)}>권장가 {usd(s.recommended)}로</button>}
+          {Math.abs(d) >= 0.05 && <button type="button" className="btn ghost" onClick={() => onChange(null)}>입찰 견적가로</button>}
+        </span>
+        <span>{usd(hi, 0)} (보수적)</span>
+      </div>
+      <div className="qs-legend"><i className="lg-hatch" />손익분기 아래 <i className="lg-band" />권장 구간</div>
+    </section>
+  )
+}
+
 // MVP1 · 환율 기반 견적 리스크 (달러 견적 기준)
 export default function HomePage() {
   const { bidId, health } = useBid()
   const [assume, setAssume] = useState(null)              // null = 서버 기본값(선종·규모별)
-  useEffect(() => { setAssume(null) }, [bidId])
-  const { data, error, loading } = useAsync(() => (bidId ? api.risk(bidId, assume || {}) : Promise.resolve(null)),
-    [bidId, JSON.stringify(assume)], 150)
+  const [quote, setQuote] = useState(null)                // null = 입찰 견적가
+  useEffect(() => { setAssume(null); setQuote(null) }, [bidId])
+  const { data, error, loading } = useAsync(() => (bidId ? api.risk(bidId, { ...(assume || {}), quote }) : Promise.resolve(null)),
+    [bidId, JSON.stringify(assume), quote], 150)
   const shown = data && data.bid_id === bidId ? data : null
 
   return (
     <>
       <div className="page-head">
         <h1>환율 기반 견적 리스크</h1>
-        <p>견적가(USD)를 바꿔가며 낙찰확률, 기대가치, 원가·대금 조건을 반영한 환율 적자 위험을 함께 봅니다.</p>
+        <p>견적가를 움직여 보며 낙찰확률·기대가치와 환율로 적자가 날 위험을 함께 봅니다.</p>
       </div>
       <div className="stack">
       <BidBar />
       {error && <p className="msg err">불러오지 못했습니다: {error}</p>}
       {loading && !shown && <p className="msg">계산 중…</p>}
       {shown && (() => {
-        const s = shown.summary, m = shown.money, bt = shown.backtest
+        const s = shown.summary, bt = shown.backtest
         const a = assume || shown.assumptions
         const v = shown.verdict, st = shown.steps
         const first = st[0], final = st[st.length - 1]
         const biggest = st.slice(1).reduce((b, x, i) => (Math.abs(x.loss_prob - st[i].loss_prob) > Math.abs(b.d) ? { x, d: x.loss_prob - st[i].loss_prob } : b), { x: null, d: 0 })
         return (
           <>
+            <QuoteSlider data={shown} value={quote ?? s.quote_orig} onChange={setQuote} />
             <section className={`card verdict-box ${v.level}`}>
               <div className="vb-head">{v.head}</div>
               <p>{v.text}</p>
@@ -208,26 +251,33 @@ export default function HomePage() {
               <p className="vb-note">판단 기준: 적자확률이 안전 기준({pct(a.loss_target, 0)}) 이하면 낮음, 25% 이상이면 높음. 견적가가 손익분기 아래면 환율과 상관없이 손해. 이 가격으로 들어갈지는 반사실 화면에서 판단합니다.</p>
             </section>
             <StatStrip items={[
-              { k: '견적가 기준 낙찰확률', v: pct(s.p_now, 0), meter: s.p_now, s: '이 견적가로 낙찰될 확률' },
+              { k: '낙찰확률', v: pct(s.p_now, 0), meter: s.p_now, s: '이 견적가로 낙찰될 확률' },
               { k: '기대가치 (척당)', v: `${s.ev_now.toFixed(1)} $M`, s: '낙찰확률 × (견적가 − 손익분기)' },
               { k: '적자확률', v: pct(s.loss_prob_now, 0), tone: s.loss_prob_now > a.loss_target ? 'warn' : '',
-                s: `인도까지 ${s.months}개월 · 원가 전부 원화·인도 일시 수령이면 ${pct(shown.simple.loss_prob, 0)}` },
+                s: `인도까지 ${s.months}개월 · 예전 계산이면 ${pct(shown.simple.loss_prob, 0)}` },
               { k: '권장 견적가', v: s.recommended != null ? usd(s.recommended) : '없음', tone: 'accent', s: s.band_lo != null ? `권장 구간 ${usd(s.band_lo)} ~ ${usd(s.band_hi)}` : '기대가치가 0 이하' },
             ]} />
-            <StatStrip items={[
-              { k: '척당 예상 이익', v: eok(m.profit_ship_mean), tone: m.profit_ship_mean < 0 ? 'warn' : '',
-                s: `범위 ${eok(m.profit_ship_p10)} ~ ${eok(m.profit_ship_p90)} · 마진 ${pct(s.margin_mean_now, 1)}` },
-              { k: `전체 ${m.num_ships}척 합계`, v: eok(m.profit_total_mean), tone: m.profit_total_mean < 0 ? 'warn' : '', s: '낙찰했을 때 기대 총이익' },
-              { k: '실행원가 (척당)', v: eok(m.cost_total), s: `견적가 ${eok(m.quote_krw)} · 환율 ${krw(m.fx)} 기준` },
-              { k: '안전 시작 견적가', v: s.safe_quote != null ? usd(s.safe_quote) : '범위 밖', tone: 'accent',
-                s: s.safe_quote != null ? `${eok(m.safe_quote_krw)} · 적자확률 ${pct(a.loss_target, 0)} 이하가 되는 최저 견적` : '시장가 +15% 안에서는 기준을 못 맞춤' },
-            ]} />
 
+            <div className="two wide-left">
+              <Figure title="견적가별 기대가치" unit="척당 $M"
+                info="얼마에 내야 평균적으로 가장 많이 남는지 봅니다. 너무 높으면 못 따고, 너무 낮으면 따도 남는 게 없습니다.">
+                <EvChart data={shown} height={340} />
+                <Legend items={LEGEND.ev} />
+              </Figure>
+              <Conclusions data={shown} onRecommended={() => setQuote(s.recommended)} />
+            </div>
             <div className="two">
-              <AssumptionsCard data={shown} value={a} onChange={setAssume} onReset={() => setAssume(null)} />
-              <DecisionCard data={shown} onHedge={(h) => setAssume({ ...a, hedge: h })} />
+              <Figure title="견적가별 적자확률" unit="%" info="견적을 얼마 이상 불러야 환율이 나빠져도 버틸 수 있는지 봅니다.">
+                <LossChart data={shown} target={a.loss_target} safe={s.safe_quote} />
+                <Legend items={LEGEND.loss} />
+              </Figure>
+              <Figure title="인도 시점 마진 범위" unit="%" info="같은 견적가라도 환율·원가에 따라 마진이 흔들립니다. 얼마나 흔들리는지 봐야 견적의 여유를 정할 수 있습니다.">
+                <MarginBandChart data={shown} />
+                <Legend items={LEGEND.margin} />
+              </Figure>
             </div>
 
+            <h2 className="section-title">근거 <span className="section-sub">숫자가 왜 이렇게 나왔나</span></h2>
             <div className="two">
               <Figure title={`적자확률 ${pct(final.loss_prob, 0)}의 근거`} unit="가정을 하나씩 더할 때"
                 info="예전 계산(원가 전부 원화, 대금은 인도 때 한 번에)에서 시작해, 실제 조선업 조건을 하나씩 반영하면 적자확률이 어떻게 바뀌는지 보여 줍니다.">
@@ -250,24 +300,12 @@ export default function HomePage() {
               )}
             </div>
 
-            <Figure title="견적가별 기대가치" unit="척당 $M"
-              info="얼마에 내야 평균적으로 가장 많이 남는지 봅니다. 너무 높으면 못 따고, 너무 낮으면 따도 남는 게 없습니다.">
-              <EvChart data={shown} />
-              <Legend items={LEGEND.ev} />
-            </Figure>
-
+            <h2 className="section-title">가정과 대응 <span className="section-sub">가정을 고치면 위 숫자가 모두 다시 계산돼요</span></h2>
             <div className="two">
-              <Figure title="인도 시점 마진 범위" unit="%" info="같은 견적가라도 환율·원가에 따라 마진이 흔들립니다. 얼마나 흔들리는지 봐야 견적의 여유를 정할 수 있습니다.">
-                <MarginBandChart data={shown} />
-                <Legend items={LEGEND.margin} />
-              </Figure>
-              <Figure title="견적가별 적자확률" unit="%" info="견적을 얼마 이상 불러야 환율이 나빠져도 버틸 수 있는지 봅니다.">
-                <LossChart data={shown} target={a.loss_target} safe={s.safe_quote} />
-                <Legend items={LEGEND.loss} />
-              </Figure>
+              <AssumptionsCard data={shown} value={a} onChange={setAssume} onReset={() => setAssume(null)} />
+              <DecisionCard data={shown} onHedge={(h) => setAssume({ ...a, hedge: h })} />
             </div>
 
-            <Conclusions data={shown} />
             <p className="card-note">
               {health?.source === 'mock'
                 ? '낙찰확률 모델이 아직 연결되지 않아 낙찰확률은 예시 계산입니다. 손익분기와 환율 위험은 실제 계산입니다.'
