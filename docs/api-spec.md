@@ -34,8 +34,10 @@
 ### `GET /api/bids/{id}/curve` 응답 (요약)
 - `summary`: `quote_now, ratio_now, bep, bep_ratio, months, p_now, profit_now, ev_now, loss_prob_now, margin_mean_now, best_quote, best_ratio, best_ev, band_lo, band_hi, recommended, recommended_below_bep, fx_assumed, fx_breakeven`
 - `grid[]`: `ratio, quote, p, ev, ev_risk, loss_prob, margin_rule, margin_mean, margin_p10, margin_p50, margin_p90`
-- `recommended` = 기대가치가 최고점의 85% 이상인 범위(권장 범위)의 하한 (A 의 정책). 화면 이름은 **수주 우선가**. 기대가치가 모두 0 이하면 `null`.
-- `best_quote` = 기대가치 최고점. 화면 이름은 **이익 우선가**.
+- `recommended` = **권장 견적가**: 적자확률이 안전 기준(10%) 이하인 견적가 중 기대가치가 가장 높은 가격 (`quote_risk.recommend()`). 그때 낙찰확률이 10% 미만이거나 가격이 없으면 `null`, `no_safe_price=true`.
+- `band_lo`~`band_hi` = **권장 범위**: 기대가치가 최고점의 85% 이상이면서 적자확률 10% 이하. 아래 끝은 꼭 따야 할 때의 최저선.
+- `best_quote` = 기대가치 최고점, `safe_quote` = 적자확률이 10%가 되는 견적가, `rec_p`·`rec_ev`·`rec_loss` = 권장 견적가에서의 값, `rec_needed` = 기준을 맞추려면 필요한 견적가.
+- A 정책의 원래 값(기대가치 85% 구간의 하한)은 `recommended_ev_only`, `band_lo_ev_only`, `band_hi_ev_only` 로 남긴다.
 - `fx_breakeven` = 이 견적가에서 원화 매출 = 원가 가 되는 인도 시점 환율 (화면 이름: 버틸 수 있는 환율).
 
 ### `POST /api/scenario/compare`
@@ -137,6 +139,6 @@
 `summary` 에 예전 가정 값 `loss_prob_simple`·`fx_breakeven_simple`, 원화 원가 비중 `krw_cost_share` 를 함께 준다.
 `fx_breakeven` 이 `null` 이면 환율이 입찰 시점의 절반 아래로 내려가도 적자가 나지 않는다는 뜻이다.
 
-### 화면 용어: 이익 우선가 · 수주 우선가 · 권장 범위 (v0.4)
-값은 그대로이고 화면·챗봇의 이름만 바꿨다. `best_quote` = **이익 우선가**(기대가치 최고점), `recommended`(= `band_lo`, A 정책 값) = **수주 우선가**,
-`band_lo`~`band_hi` = **권장 범위**(기대가치가 최고점의 85% 이상). `scenario-table` 각 행에 `best_quote` 추가.
+### 권장 견적가 기준 변경 (v0.5)
+권장 견적가 = **적자확률 10% 이하에서 기대가치가 가장 높은 가격** 하나로 정한다. 이익 우선가·수주 우선가·안전 시작 견적가로 나눠 보여 주던 것을 합쳤다.
+계산은 `backend/quote_risk.py` 의 `recommend()` 한 곳. 엔진 곡선(`/curve`·`/compare`·시나리오 표·챗봇)과 `/risk`(견적리스크 화면의 가정 기준) 모두 이 규칙을 쓴다.

@@ -79,7 +79,6 @@ export function EvChart({ data, base = null, height = 380 }) {
   const recX = s.recommended != null ? xOfQuote(s, s.recommended) : null
   const rec = recX != null ? nearest(rows, recX) : null
   const recLeft = recX != null && recX < nowX
-  const best = s.recommended != null && s.best_quote != null ? nearest(rows, xOfQuote(s, s.best_quote)) : null   // 이익 우선가 = 기대가치 최고점
   const ys = rows.flatMap((r) => [r.ev, r.base_ev]).filter((v) => v != null)
   const yScale = niceScale(Math.min(...ys, 0), Math.max(...ys, 1))
   return (
@@ -97,11 +96,9 @@ export function EvChart({ data, base = null, height = 380 }) {
         {base && <Line dataKey="base_ev" stroke={BASE} strokeWidth={1.5} strokeDasharray="5 4" dot={false} isAnimationActive={false} />}
         <Line dataKey="ev" stroke={LINE} strokeWidth={2.4} dot={false} isAnimationActive={false} />
         <ReferenceDot x={nowX} y={s.ev_now} r={5} fill={INK} stroke="#fff" strokeWidth={2} ifOverflow="extendDomain" />
-        {rec && <ReferenceDot x={rec.x} y={rec.ev} r={5} fill="#fff" stroke={LINE} strokeWidth={2.2}
-          label={{ value: `수주 우선 ${usd(s.recommended)}`, position: 'left', fill: LINE, fontSize: 12, fontWeight: 600, dx: -2 }} />}
-        {best && <ReferenceDot x={best.x} y={best.ev} r={5.5} fill={ACCENT} stroke="#fff" strokeWidth={1.5}
-          label={{ value: `이익 우선 ${usd(s.best_quote)}`, fill: ACCENT, fontSize: 12, fontWeight: 600,
-            ...(Math.abs(best.x - nowX) < 2 ? { position: 'bottom', dy: 6 } : { position: 'top', dy: -4 }) }} />}   {/* 견적가 선 라벨과 겹치지 않게 */}
+        {rec && <ReferenceDot x={rec.x} y={rec.ev} r={5.5} fill={ACCENT} stroke="#fff" strokeWidth={1.5}
+          label={{ value: `권장 ${usd(s.recommended)}`, fill: ACCENT, fontSize: 12, fontWeight: 600,
+            ...(Math.abs(rec.x - nowX) < 2 ? { position: 'bottom', dy: 6 } : { position: 'top', dy: -4 }) }} />}   {/* 견적가 선 라벨과 겹치지 않게 */}
         <Tooltip cursor={{ stroke: INK, strokeWidth: 0.8 }} content={<Tip extra={(r) => (
           <div style={{ color: '#4b5260' }}>낙찰확률 {pct(r.p, 0)} · 기대가치 {r.ev.toFixed(2)}{base ? ` (기준 ${r.base_ev.toFixed(2)})` : ''}</div>
         )} />} />
@@ -139,7 +136,7 @@ export function MarginBandChart({ data, height = 300 }) {
   )
 }
 
-/** 견적가별 환율·원가 적자확률. target(안전 기준)과 safe(안전 시작 견적가)를 주면 점선으로 표시 */
+/** 견적가별 환율·원가 적자확률. target(안전 기준)과 safe(적자확률이 기준이 되는 견적가)를 주면 점선으로 표시 */
 export function LossChart({ data, target = null, safe = null, height = 300 }) {
   const s = data.summary
   const rows = data.grid.map((g) => ({ x: toX(g.ratio), quote: g.quote, loss: g.loss_prob * 100 }))

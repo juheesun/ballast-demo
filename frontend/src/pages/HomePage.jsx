@@ -6,7 +6,7 @@ import { usd, pct, krw, eok, signed, vsMarket } from '../format.js'
 import BidBar from '../components/BidBar.jsx'
 import StatStrip from '../components/Stat.jsx'
 import Figure from '../components/Figure.jsx'
-import Conclusions, { winRisk } from '../components/Conclusions.jsx'
+import Conclusions from '../components/Conclusions.jsx'
 import Assume from '../components/Assume.jsx'
 import { Info, Legend } from '../components/Info.jsx'
 import { EvChart, MarginBandChart, LossChart, BacktestChart, COLORS as C } from '../components/charts.jsx'
@@ -15,9 +15,8 @@ import { EvChart, MarginBandChart, LossChart, BacktestChart, COLORS as C } from 
 const LEGEND = {
   ev: [
     { kind: 'line', color: C.LINE, label: '기대가치', why: '견적가마다 낙찰확률 × (견적가 − 손익분기). 높을수록 평균적으로 많이 남는 견적입니다.' },
-    { kind: 'band', color: C.BAND, label: '권장 범위', why: '기대가치가 최고점의 85% 이상인 범위. 이 안이면 기대가치를 크게 잃지 않습니다.' },
-    { kind: 'dot', color: C.ACCENT, label: '이익 우선가', why: '기대가치가 가장 높은 견적가. 평균적으로 가장 많이 남습니다.' },
-    { kind: 'ring', color: C.LINE, label: '수주 우선가', why: '권장 범위의 아래 끝. 기대가치를 크게 잃지 않으면서 낙찰확률이 가장 높은 견적가입니다.' },
+    { kind: 'band', color: C.BAND, label: '권장 범위', why: '기대가치가 최고점의 85% 이상이면서 적자확률이 안전 기준 이하인 범위. 아래 끝은 꼭 따야 할 때의 최저선입니다.' },
+    { kind: 'dot', color: C.ACCENT, label: '권장 견적가', why: '적자확률이 안전 기준 이하인 견적가 중 기대가치가 가장 높은 가격입니다.' },
     { kind: 'hatch', color: C.LOSS, label: '손익분기 아래', why: '이 견적가로 따면 원가도 못 건집니다. 들어가면 안 되는 영역입니다.' },
     { kind: 'vline', color: C.INK, label: '견적가', why: '지금 내려는 견적가의 위치입니다.' },
   ],
@@ -30,7 +29,7 @@ const LEGEND = {
   loss: [
     { kind: 'line', color: C.LOSS, label: '적자확률', why: '견적을 높게 부를수록 환율이 나빠져도 버틸 여유가 커져 적자확률이 내려갑니다.' },
     { kind: 'dash', color: C.MUTED, label: '안전 기준', why: '이 확률 이하면 "안전하다"고 보는 기준입니다 (가정, 위에서 고칠 수 있음).' },
-    { kind: 'dash', color: C.ACCENT, label: '안전 시작 견적가', why: '적자확률이 안전 기준 이하가 되는 가장 낮은 견적가입니다. 견적을 이보다 낮게 시작하지 마세요.' },
+    { kind: 'dash', color: C.ACCENT, label: '적자확률 기준선', why: '적자확률이 안전 기준이 되는 견적가입니다. 권장 견적가와 권장 범위는 이보다 높은 쪽에서만 고릅니다.' },
     { kind: 'vline', color: C.INK, label: '견적가', why: '지금 견적가의 적자확률입니다.' },
   ],
   backtest: [
@@ -107,7 +106,7 @@ function AssumptionsCard({ data, value, onChange, onReset }) {
           <Info text="받을 달러 중 선물환으로 입찰 시점 환율에 고정하는 비율입니다. 환율이 내려도 손해가 없지만, 올라도 이익을 못 봅니다. (헤지 비용은 0으로 가정)" />
         </span><Assume value={a.hedge} onChange={(v) => onChange({ ...a, hedge: v })} /></div>
         <div className="ms"><span className="k">안전 기준 (적자확률)
-          <Info text="적자확률이 이 값 이하면 '안전'으로 봅니다. 안전 시작 견적가와 아래 판단 도구의 기준입니다." />
+          <Info text="적자확률이 이 값 이하면 '안전'으로 봅니다. 권장 견적가·권장 범위와 아래 판단 도구가 이 기준을 씁니다." />
         </span><Assume value={a.loss_target} min={1} max={50} onChange={(v) => onChange({ ...a, loss_target: v })} /></div>
       </div>
       {data.notes.map((n) => <p className="warnline" key={n}>{n}</p>)}
@@ -206,8 +205,7 @@ function QuoteSlider({ data, value, onChange }) {
       <div className="qs-ends">
         <span>{usd(lo, 0)} (공격적)</span>
         <span className="qs-btns">
-          {s.recommended != null && <button type="button" className="btn" onClick={() => onChange(s.best_quote)}>이익 우선가 {usd(s.best_quote)}로</button>}
-          {s.recommended != null && <button type="button" className="btn" onClick={() => onChange(s.recommended)}>수주 우선가 {usd(s.recommended)}로</button>}
+          {s.recommended != null && <button type="button" className="btn" onClick={() => onChange(s.recommended)}>권장 견적가 {usd(s.recommended)}로</button>}
           {Math.abs(d) >= 0.05 && <button type="button" className="btn ghost" onClick={() => onChange(null)}>입찰 견적가로</button>}
         </span>
         <span>{usd(hi, 0)} (보수적)</span>
@@ -257,8 +255,9 @@ export default function HomePage() {
               { k: '기대가치 (척당)', v: `${s.ev_now.toFixed(1)} $M`, s: '낙찰확률 × (견적가 − 손익분기)' },
               { k: '적자확률', v: pct(s.loss_prob_now, 0), tone: s.loss_prob_now > a.loss_target ? 'warn' : '',
                 s: `인도까지 ${s.months}개월 · 예전 계산이면 ${pct(shown.simple.loss_prob, 0)}` },
-              { k: '이익 우선가', v: s.recommended != null ? usd(s.best_quote) : '없음', tone: 'accent',
-                s: s.recommended != null ? `수주 우선가 ${usd(s.recommended)}${winRisk(shown)?.over ? ` (적자확률 ${pct(winRisk(shown).loss, 0)} ⚠)` : ''} · 권장 범위 ${usd(s.band_lo)} ~ ${usd(s.band_hi)}` : '기대가치가 0 이하' },
+              { k: '권장 견적가', v: s.recommended != null ? usd(s.recommended) : '없음', tone: s.recommended != null ? 'accent' : 'warn',
+                s: s.recommended != null ? `권장 범위 ${usd(s.band_lo)} ~ ${usd(s.band_hi)} · 적자확률 ${pct(s.rec_loss, 0)}`
+                  : `안전하게 딸 가격 없음 (${usd(s.rec_needed)}까지 올려야 낙찰 ${pct(s.rec_p, 0)})` },
             ]} />
 
             <div className="two wide-left">
