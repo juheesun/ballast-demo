@@ -174,10 +174,54 @@ table.data td.l, table.data th.l { text-align: left; }
 .msg { padding: 40px 0; color: var(--ink-3); }
 .msg.err { color: var(--loss); }
 
+/* ── 견적 리스크: ⓘ 설명 · 범례 · 가정 배지 · 판단 도구 ── */
+.info { position: relative; display: inline-grid; place-items: center; margin-left: 4px; color: var(--ink-3); font-size: 12.5px; font-weight: 400; cursor: help; outline: none; }
+.info:hover, .info:focus { color: var(--blue); }
+.info-tip { visibility: hidden; opacity: 0; position: absolute; z-index: 20; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%); width: max-content; max-width: 280px;
+  background: var(--navy); color: #fff; font-size: 12px; font-weight: 400; line-height: 1.5; padding: 7px 10px; border-radius: 8px; text-align: left; white-space: normal; transition: opacity .12s; pointer-events: none; }
+.info:hover .info-tip, .info:focus .info-tip { visibility: visible; opacity: 1; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; font-size: 12.5px; color: var(--ink-2); }
+.legend .lg { display: inline-flex; align-items: center; gap: 6px; }
+.sw { display: inline-block; width: 16px; height: 10px; }
+.sw.line { height: 0; border-top: 2.5px solid var(--c); }
+.sw.dash { height: 0; border-top: 2px dashed var(--c); }
+.sw.band { background: var(--c); opacity: .6; border-radius: 2px; }
+.sw.hatch { background: repeating-linear-gradient(45deg, var(--c) 0 1px, transparent 1px 4px); opacity: .7; }
+.sw.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.sw.vline { width: 0; height: 14px; border-left: 2px solid var(--c); }
+.assume { display: inline-flex; align-items: center; gap: 5px; border: 1px dashed #e6c3a8; background: #fffaf6; border-radius: 7px; padding: 2px 6px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.assume:hover { border-color: var(--accent); }
+.assume-tag { font-size: 10.5px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 5px; padding: 0 5px; }
+.assume.editing { border-style: solid; border-color: var(--accent); background: #fff; }
+.assume.editing input { width: 52px; border: 0; outline: none; padding: 0; text-align: right; font-weight: 600; background: none; }
+.linkbtn { border: 0; background: none; padding: 0; color: var(--blue); font-size: 12px; }
+.sub-title { font-size: 13px; font-weight: 700; margin: 14px 0 4px; display: flex; align-items: center; }
+table.data.compact td { padding: 6px 10px; }
+table.data tr.total td { font-weight: 700; border-top: 1px solid var(--line); }
+.hl { font-size: 13px; color: var(--ink-2); margin-top: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.hl b { color: var(--ink); }
+.ms-row { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 6px; }
+.ms { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.ms .k { color: var(--ink-2); display: inline-flex; align-items: center; }
+.ms.sum b { font-variant-numeric: tabular-nums; }
+.warnline { color: var(--ink-2); font-size: 12.5px; border-top: 1px dashed var(--line); margin-top: 10px; padding-top: 6px; }
+.stat .v.warn { color: var(--loss); }
+.decision .lead { font-size: 13.5px; color: var(--ink-2); margin: 6px 0 12px; }
+.decision .lead b { font-variant-numeric: tabular-nums; }
+.options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.opt { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.opt-k { font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
+.opt-v { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.opt-v span { font-size: 14px; color: var(--ink-2); font-weight: 600; }
+.opt ul { margin: 0; padding-left: 16px; font-size: 13px; color: var(--ink-2); display: grid; gap: 2px; }
+.opt .btn { align-self: flex-start; margin-top: 4px; }
+.muted { color: var(--ink-3); font-size: 13px; }
+
 @media (max-width: 1000px) {
-  .two, .verdicts, .form-grid { grid-template-columns: 1fr; }
+  .two, .verdicts, .form-grid, .options { grid-template-columns: 1fr; }
   .two.wide-left { grid-template-columns: 1fr; } .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .workspace { grid-template-columns: minmax(0, 1fr); } .chat { position: static; height: 560px; }
   table.data { display: block; overflow-x: auto; white-space: nowrap; }
   .topbar { padding: 0 14px; overflow-x: auto; } .brand { margin-right: 18px; } .page { padding: 16px 14px 40px; }
 }
+.okfacts { margin: 0; padding-left: 18px; font-size: 13px; color: var(--ink-2); display: grid; gap: 4px; }

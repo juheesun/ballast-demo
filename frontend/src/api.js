@@ -17,6 +17,7 @@ export const api = {
   presets: () => request('/api/scenarios/presets'),
   fx: () => request('/api/fx/latest'),
   curve: (bidId, params = {}) => request(`/api/bids/${bidId}/curve?` + new URLSearchParams(params)),
+  risk: (bidId, assumptions = {}) => request(`/api/bids/${bidId}/risk`, json(assumptions)),
   compare: (bidId, scenario) => request('/api/scenario/compare', json({ bid_id: bidId, scenario })),
   chat: (bidId, message, params) => request('/api/chat', json({ bid_id: bidId, message, params })),
   history: () => request('/api/history'),
