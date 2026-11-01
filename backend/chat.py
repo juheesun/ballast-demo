@@ -17,6 +17,7 @@
 나중에 Claude API 로 바꾸더라도, answer() 의 출력 형식만 지키면 화면은 그대로다.
 """
 from __future__ import annotations
+import math
 import re
 import traceback
 from typing import Optional
@@ -345,7 +346,10 @@ def describe(params: dict) -> list:
 
 
 def _p(v: Optional[float], d: int = 0) -> str:
-    return "–" if v is None else f"{v * 100:.{d}f}%"
+    if v is None:
+        return "–"
+    k = 10 ** d                                            # 화면(toFixed)과 같은 반올림: 96.5% → 97%
+    return f"{math.floor(v * 100 * k + 0.5 + 1e-6) / k:.{d}f}%"
 
 
 def _m(v: Optional[float]) -> str:

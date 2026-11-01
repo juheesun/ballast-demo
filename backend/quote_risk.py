@@ -16,6 +16,7 @@ modeling/ 의 MarginModel 은 '원가 전부 원화 · 대금은 인도 때 한 
 """
 from __future__ import annotations
 import json
+import math
 from typing import Optional
 import numpy as np
 
@@ -33,6 +34,7 @@ USD_COST_AT = 0.5                 # 달러 원가를 치르는 시점 (납기 �
 # 대금 분할 기본값: 계약·착공·진수·인도에 20/20/20/40. at = 납기 대비 받는 시점
 MILESTONES = [("contract", "계약", 0.0, 0.2), ("start", "착공", 0.25, 0.2), ("launch", "진수", 0.75, 0.2), ("delivery", "인도", 1.0, 0.4)]
 FX_FLOOR = 0.5                    # 버틸 수 있는 환율이 입찰 환율의 절반 아래면 '사실상 없음'(None)으로 본다
+LOSS_HIGH = 0.25                  # 적자확률이 이 이상이면 '환율 위험 높음' (판단 요약 카드와 같은 기준)
 LOSS_TARGET = 0.10                # '안전 시작 견적가' 기준: 적자확률이 이 값 이하가 되는 가장 낮은 견적가
 BACKTEST_FROM = "2010-01"
 
@@ -188,6 +190,42 @@ def apply_defaults(be, bid_id: str, payload: dict) -> dict:
     return payload
 
 
+def fx_verdict(q: float, bep: float, loss: float, target: float, fx_be: Optional[float], fx0: float,
+               raise_opt: Optional[dict], hedge_opt: Optional[dict], hedge: float) -> dict:
+    """견적리스크 화면 결론: '환율로 손해 볼 위험이 큰가'. (들어갈지 말지는 반사실 화면의 chat.verdict_parts 가 답한다)
+    level: go(낮음) · down(보통) · stop(높음 또는 환율과 상관없이 손해) — 화면 색만 정한다."""
+    pct = lambda v: f"{math.floor(v * 100 + 0.5 + 1e-6)}%"        # 화면(toFixed)과 같은 반올림: 96.5% → 97%
+    if fx_be is None:
+        fx_line = "환율이 절반으로 내려가도 적자가 나지 않아요."
+    elif fx_be >= fx0:
+        fx_line = f"지금 환율로도 적자 쪽이고, 환율이 {fx_be:,.0f}원 위로 올라야 본전이에요."
+    else:
+        fx_line = f"환율이 {fx_be:,.0f}원(지금보다 {(fx_be / fx0 - 1) * 100:+.1f}%) 아래로 내려가 머물면 적자예요."
+    up = f"견적가를 ${raise_opt['delta']:.1f}M 올려 ${raise_opt['quote']:.1f}M로" if raise_opt else None
+    hg = f"환헤지를 {pct(hedge_opt['ratio'])}로 늘려" if hedge_opt else None
+    goal = f"적자확률을 기준({pct(target)}) 아래로 낮추세요."
+    if up and hg:
+        fix = f"{up} 내거나, {hg} {goal}"
+    elif up:
+        fix = f"{up} 내서 {goal} 헤지만으로는 못 막아요."
+    elif hg:
+        fix = f"{hg} {goal}"
+    else:
+        fix = "헤지로는 못 막아요. 견적가를 손익분기 위로 올리는 것부터 검토하세요."
+    if q < bep:
+        return {"level": "stop", "head": "환율과 상관없이 손해예요",
+                "text": f"견적가 ${q:.1f}M가 손익분기 선가 ${bep:.1f}M보다 낮아서, 환율이 그대로여도 적자예요 (적자확률 {pct(loss)}). {fx_line}",
+                "todo": fix}
+    if loss <= target:
+        return {"level": "go", "head": "환율 위험 낮음",
+                "text": f"적자확률 {pct(loss)}로 안전 기준({pct(target)}) 이하예요. {fx_line}",
+                "todo": ("지금 견적과 헤지 비율을 유지하세요." if fx_be is None
+                         else f"지금 견적과 헤지 {pct(hedge)}를 유지하고, 환율이 {fx_be:,.0f}원 가까이 내려가면 헤지를 늘리세요." if hedge > 0
+                         else f"지금 견적을 유지하고, 환율이 {fx_be:,.0f}원 가까이 내려가면 환헤지를 걸어 대비하세요.")}
+    return {"level": "stop" if loss >= LOSS_HIGH else "down", "head": "환율 위험 높음" if loss >= LOSS_HIGH else "환율 위험 보통",
+            "text": f"적자확률 {pct(loss)}로 안전 기준({pct(target)})보다 높아요. {fx_line}", "todo": fix}
+
+
 def evaluate(be, bid_id: str, assumptions: Optional[dict] = None) -> dict:
     a, notes = _merge(bid_id, assumptions)
     cur = be.curve(bid_id)                                       # 낙찰확률·기대가치·권장가 (엔진 값)
@@ -270,9 +308,8 @@ def evaluate(be, bid_id: str, assumptions: Optional[dict] = None) -> dict:
              "profit_ship_p90": _r(np.percentile(prof_ship, 90), 0),
              "profit_total_mean": _r(prof_ship.mean() * ship["num_ships"], 0),
              "safe_quote_krw": _r(safe * eok, 0) if safe is not None else None}
-    from .chat import verdict_parts                              # 결론 한 줄: 반사실 화면과 같은 기준 (순환 import 를 피해 여기서)
     return {"source": be.source, "bid_id": bid_id, "ship": ship, "assumptions": a, "notes": notes,
             "summary": summary, "grid": grid, "money": money, "simple": simple, "steps": steps,
-            "verdict": verdict_parts({**summary, "loss_prob_now": loss_now}),
+            "verdict": fx_verdict(q_now, bep, loss_now, target, summary["fx_breakeven"], fx0, raise_opt, hedge_opt, hedge),
             "decision": {"target": target, "ok_now": loss_now <= target, "raise": raise_opt, "hedge": hedge_opt},
             "backtest": _backtest(be.mm, months)}

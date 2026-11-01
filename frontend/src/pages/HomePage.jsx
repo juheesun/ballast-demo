@@ -203,9 +203,9 @@ export default function HomePage() {
           <>
             <section className={`card verdict-box ${v.level}`}>
               <div className="vb-head">{v.head}</div>
-              <p>{v.text} 적자확률은 <b>{pct(s.loss_prob_now, 0)}</b>, 낙찰확률은 <b>{pct(s.p_now, 0)}</b>예요.</p>
+              <p>{v.text}</p>
               <p className="todo"><b>이렇게 해 보세요</b>{v.todo}</p>
-              <p className="vb-note">판단 기준: 견적가가 손익분기 선가 아래면 손해, 아니면 권장 구간(기대가치가 최고점의 85% 이상) 아래·위·안. 반사실 화면과 같은 기준이며, 최종 결정은 담당자가 합니다.</p>
+              <p className="vb-note">판단 기준: 적자확률이 안전 기준({pct(a.loss_target, 0)}) 이하면 낮음, 25% 이상이면 높음. 견적가가 손익분기 아래면 환율과 상관없이 손해. 이 가격으로 들어갈지는 반사실 화면에서 판단합니다.</p>
             </section>
             <StatStrip items={[
               { k: '견적가 기준 낙찰확률', v: pct(s.p_now, 0), meter: s.p_now, s: '이 견적가로 낙찰될 확률' },
