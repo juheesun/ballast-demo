@@ -187,6 +187,10 @@ def apply_defaults(be, bid_id: str, payload: dict) -> dict:
     s.update(loss_prob_simple=s["loss_prob_now"], fx_breakeven_simple=s["fx_breakeven"],
              loss_prob_now=_r((m < 0).mean()), margin_mean_now=_r(m.mean()),
              fx_breakeven=_r(breakeven_fx(q, bep, usd, a, a["hedge"], fx_bid, g0), 1), krw_cost_share=_r(1 - usd))
+    # 이익 우선가·수주 우선가에서의 적자확률: 수주 우선가가 안전 기준을 넘으면 화면·챗봇이 경고한다
+    loss_at = lambda x: None if x is None else _r((1.0 - bep * C / (float(x) * R) < 0).mean())
+    s.update(loss_prob_profit=loss_at(s.get("best_quote") if s.get("recommended") is not None else None),
+             loss_prob_win=loss_at(s.get("recommended")), loss_target=LOSS_TARGET)
     return payload
 
 

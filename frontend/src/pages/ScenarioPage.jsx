@@ -274,7 +274,7 @@ export default function ScenarioPage() {
                 const fxNote = base && fx10 && fx10.recommended != null && base.recommended != null && fx10.recommended > base.recommended
                 return (
                   <Fold title="전체 시나리오 표" hint={`(${table.length - 1}개 조건)`}>
-                    <p className="card-note">행을 누르면 그 조건이 적용됩니다.</p>
+                    <p className="card-note">행을 누르면 그 조건이 적용됩니다. 수주 우선가의 ⚠는 그 가격에서 적자확률이 안전 기준(10%)을 넘는다는 뜻입니다.</p>
                     <table className="data">
                       <thead><tr><th>조건</th><th>낙찰확률</th><th>예상 마진</th><th>적자확률</th><th>기대가치</th><th>변화</th><th>이익 우선가</th><th>수주 우선가</th></tr></thead>
                       <tbody>
@@ -285,7 +285,10 @@ export default function ScenarioPage() {
                             <td>{r.ev_now.toFixed(1)}</td>
                             <td className={r.d_ev < 0 ? 'neg' : ''}>{r.id === 'base' ? '–' : signed(r.d_ev, 1)}</td>
                             <td>{r.recommended != null ? usd(r.best_quote) : '–'}</td>
-                            <td>{r.recommended != null ? usd(r.recommended) : '–'}</td>
+                            <td className={r.loss_prob_win > (data.scenario.summary.loss_target ?? 0.1) ? 'neg' : ''}
+                              title={r.loss_prob_win != null ? `이 가격의 적자확률 ${pct(r.loss_prob_win, 0)}` : undefined}>
+                              {r.recommended != null ? usd(r.recommended) : '–'}{r.loss_prob_win > (data.scenario.summary.loss_target ?? 0.1) ? ' ⚠' : ''}
+                            </td>
                           </tr>
                         ))}
                       </tbody>

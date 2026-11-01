@@ -6,7 +6,7 @@ import { usd, pct, krw, eok, signed, vsMarket } from '../format.js'
 import BidBar from '../components/BidBar.jsx'
 import StatStrip from '../components/Stat.jsx'
 import Figure from '../components/Figure.jsx'
-import Conclusions from '../components/Conclusions.jsx'
+import Conclusions, { winRisk } from '../components/Conclusions.jsx'
 import Assume from '../components/Assume.jsx'
 import { Info, Legend } from '../components/Info.jsx'
 import { EvChart, MarginBandChart, LossChart, BacktestChart, COLORS as C } from '../components/charts.jsx'
@@ -258,7 +258,7 @@ export default function HomePage() {
               { k: '적자확률', v: pct(s.loss_prob_now, 0), tone: s.loss_prob_now > a.loss_target ? 'warn' : '',
                 s: `인도까지 ${s.months}개월 · 예전 계산이면 ${pct(shown.simple.loss_prob, 0)}` },
               { k: '이익 우선가', v: s.recommended != null ? usd(s.best_quote) : '없음', tone: 'accent',
-                s: s.recommended != null ? `수주 우선가 ${usd(s.recommended)} · 권장 범위 ${usd(s.band_lo)} ~ ${usd(s.band_hi)}` : '기대가치가 0 이하' },
+                s: s.recommended != null ? `수주 우선가 ${usd(s.recommended)}${winRisk(shown)?.over ? ` (적자확률 ${pct(winRisk(shown).loss, 0)} ⚠)` : ''} · 권장 범위 ${usd(s.band_lo)} ~ ${usd(s.band_hi)}` : '기대가치가 0 이하' },
             ]} />
 
             <div className="two wide-left">

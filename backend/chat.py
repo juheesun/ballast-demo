@@ -413,6 +413,8 @@ def _summary_lines(be, bid_id: str, params: dict) -> tuple:
     if s["recommended"] is not None:
         lines.append(f"이익 우선가는 {_m(s['best_quote'])}, 수주 우선가는 {_m(s['recommended'])}예요 "
                      f"(권장 범위 {_m(s['band_lo'])} ~ {_m(s['band_hi'])}).")
+        if win_warning(s):
+            lines.append(win_warning(s))
     else:
         lines.append("이 조건에서는 기대가치가 0 이하라 이익 우선가·수주 우선가가 없어요.")
     if active:
@@ -428,6 +430,15 @@ TODO_BY_GROUP = {
     "납기": "공정 여유를 확보하고 계약서의 지체 조건을 확인하세요.",
     "복합": "경쟁사 동향 확인과 후판 선구매를 함께 검토하세요.",
 }
+def win_warning(s: dict) -> str:
+    """수주 우선가에서의 적자확률이 안전 기준을 넘으면 붙이는 경고 한 줄 (넘지 않으면 빈 문자열).
+    수주 우선가는 낙찰확률·기대가치만 보고 정한 값이라 환율 위험은 따로 확인해야 한다."""
+    lw, t = s.get("loss_prob_win"), s.get("loss_target") or 0.10
+    if lw is None or s.get("recommended") is None or lw <= t:
+        return ""
+    return f"단, 수주 우선가 {_m(s['recommended'])}에서는 환율·원가로 적자가 날 확률이 {_p(lw)}로 안전 기준({_p(t)})을 넘어요."
+
+
 LOSS_HIGH = 0.25       # 이 이상이면 '들어갈 만해요'여도 할 일로 환헤지를 권한다
 
 
@@ -438,6 +449,7 @@ def verdict_parts(s: dict) -> dict:
     q, lo, hi, bep = s["quote_now"], s.get("band_lo"), s.get("band_hi"), s["bep"]
     band = f"권장 범위({_m(lo)} ~ {_m(hi)})" if lo is not None else ""
     best = s.get("best_quote")
+    warn = (" " + win_warning(s)) if win_warning(s) else ""
     if q < bep:
         return {"level": "stop", "head": "따면 손해예요",
                 "text": f"지금 견적가 {_m(q)}는 손익분기 선가 {_m(bep)}보다 낮아서, 따내면 손해예요.",
@@ -449,14 +461,14 @@ def verdict_parts(s: dict) -> dict:
     if q < lo - 0.05:
         return {"level": "up", "head": "견적을 올려도 돼요",
                 "text": f"지금 견적가는 {band}보다 싸요. 견적을 올려도 기대가치가 비슷하거나 더 커요.",
-                "todo": f"견적을 수주 우선가 {_m(lo)} 이상으로 올려 보세요. 이익을 챙기려면 이익 우선가 {_m(best)}까지 올려도 돼요."}
+                "todo": f"견적을 수주 우선가 {_m(lo)} 이상으로 올려 보세요. 이익을 챙기려면 이익 우선가 {_m(best)}까지 올려도 돼요.{warn}"}
     if q > hi + 0.05:
         return {"level": "down", "head": "낮추세요",
                 "text": f"지금 견적가는 {band}보다 비싸요. 낮추면 낙찰 가능성을 높일 수 있어요.",
-                "todo": f"견적을 이익 우선가 {_m(best)}로 낮춰 보세요. 꼭 따야 하면 수주 우선가 {_m(lo)}까지 내려도 돼요."}
+                "todo": f"견적을 이익 우선가 {_m(best)}로 낮춰 보세요. 꼭 따야 하면 수주 우선가 {_m(lo)}까지 내려도 돼요.{warn}"}
     todo = (f"적자확률이 {_p(s['loss_prob_now'])}로 높아요. 환헤지 비율을 높여 환율 하락에 대비해 보세요."
             if s["loss_prob_now"] >= LOSS_HIGH else "지금 견적을 유지하면서 경쟁사 견적과 환율 움직임을 지켜보세요.")
-    return {"level": "go", "head": "이 가격으로 들어갈 만해요", "text": f"지금 견적가는 {band} 안이라 숫자로는 들어갈 만해요. 이익 우선가는 {_m(best)}, 수주 우선가는 {_m(lo)}예요.", "todo": todo}
+    return {"level": "go", "head": "이 가격으로 들어갈 만해요", "text": f"지금 견적가는 {band} 안이라 숫자로는 들어갈 만해요. 이익 우선가는 {_m(best)}, 수주 우선가는 {_m(lo)}예요.{warn}", "todo": todo}
 
 
 def _verdict(be, bid_id: str, params: dict) -> str:
@@ -595,6 +607,8 @@ def _answer(be, bid_id: str, message: str, prev: dict) -> dict:
     elif s["recommended"] is not None and b["recommended"] is not None and abs(s["recommended"] - b["recommended"]) >= 0.05:
         lines.append(f"이익 우선가는 {_m(b['best_quote'])} → {_m(s['best_quote'])}, "
                      f"수주 우선가는 {_m(b['recommended'])} → {_m(s['recommended'])}로 바뀌어요.")
+        if win_warning(s):
+            lines.append(win_warning(s))
     if s["quote_now"] < s["bep"]:
         lines.append(f"주의: 이 조건에서 견적가 {_m(s['quote_now'])}는 손익분기 선가 {_m(s['bep'])}보다 낮아요. 따내면 손해예요.")
     metrics = _metrics(s)

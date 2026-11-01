@@ -11,10 +11,21 @@ function interp(grid, ratio, key) {
   return a[key] + ((b[key] - a[key]) * (ratio - a.ratio)) / (b.ratio - a.ratio)
 }
 
+// 수주 우선가에서의 적자확률과 안전 기준. 기준을 넘으면 over = true → 화면에 경고
+// (수주 우선가는 낙찰확률·기대가치만 보고 정한 값이라 환율 위험은 따로 본다)
+export function winRisk(data) {
+  const s = data.summary
+  if (s.recommended == null) return null
+  const loss = interp(data.grid, s.recommended / (s.quote_now / s.ratio_now), 'loss_prob')
+  const target = data.assumptions?.loss_target ?? s.loss_target ?? 0.10
+  return { loss, target, over: loss > target + 1e-9 }
+}
+
 // 판단 요약 한 줄씩: [항목, 값, 꼬리표(tone), ⓘ 설명]
 export function buildSummary(data) {
   const s = data.summary, g = data.grid, m = data.money
   const market = s.quote_now / s.ratio_now
+  const wr = winRisk(data)
   const pos = s.band_lo == null ? ['권장 범위 없음', 'warn'] : s.quote_now < s.band_lo - 1e-6 ? ['범위 아래', 'mid']
     : s.quote_now > s.band_hi + 1e-6 ? ['범위 위', 'mid'] : ['범위 안', 'ok']
   const cushion = (s.quote_now - s.bep) / s.quote_now
@@ -24,7 +35,9 @@ export function buildSummary(data) {
     { k: '이익 우선가', v: s.recommended != null ? `${usd(s.best_quote)} (${vsMarket(s.best_quote / market)})` : '없음',
       why: '기대가치가 가장 높은 견적가. 평균적으로 가장 많이 남습니다.' },
     { k: '수주 우선가', v: s.recommended != null ? `${usd(s.recommended)} (${vsMarket(s.recommended / market)})` : '없음',
-      why: `권장 범위(${usd(s.band_lo)} ~ ${usd(s.band_hi)}, 기대가치가 최고점의 85% 이상)의 아래 끝. 꼭 따야 할 때 여기까지 내려도 기대가치를 크게 잃지 않습니다.` },
+      tone: wr?.over ? 'neg' : '', tag: wr?.over ? [`적자 ${pct(wr.loss, 0)}`, 'warn'] : null,
+      why: `권장 범위(${usd(s.band_lo)} ~ ${usd(s.band_hi)}, 기대가치가 최고점의 85% 이상)의 아래 끝. 꼭 따야 할 때 여기까지 내려도 기대가치를 크게 잃지 않습니다.`
+        + (wr?.over ? ` 단, 이 가격에서는 환율·원가로 적자가 날 확률이 ${pct(wr.loss, 0)}로 안전 기준(${pct(wr.target, 0)})을 넘습니다.` : '') },
     { k: '현재 견적가 위치', v: `시장 대비 ${vsMarket(s.ratio_now)}`, tag: pos },
     { k: '손익분기 여유', v: `${pct(cushion, 1)} (${s.quote_now < s.bep ? '−' : ''}${usd(Math.abs(s.quote_now - s.bep))})`, tone: cushion < 0 ? 'neg' : cushion < CUSHION_LOW ? 'mid' : 'pos',
       why: `손익분기 선가 ${usd(s.bep)}. 이 아래로 내면 수주해도 적자입니다.` },
@@ -49,14 +62,15 @@ export function evTip(data) {
     const r = q / (s.quote_now / s.ratio_now)
     return { q, p: interp(data.grid, r, 'p'), ev: interp(data.grid, r, 'ev') }
   }
-  const best = at(s.best_quote), win = at(s.recommended)
+  const best = at(s.best_quote), win = at(s.recommended), wr = winRisk(data)
   const near = (q) => Math.abs(q - s.quote_now) < 0.05
   const line = (name, x) => `${name} ${usd(x.q)}: 낙찰 ${pct(x.p, 0)}, 기대가치 ${x.ev.toFixed(1)} $M`
   return {
     text: `지금 ${usd(s.quote_now)}: 낙찰 ${pct(s.p_now, 0)}, 기대가치 ${s.ev_now.toFixed(1)} $M`,
     options: [
       { key: 'best', label: '이익 우선가로', text: line('이익 우선가', best), q: best.q, here: near(best.q) },
-      { key: 'win', label: '수주 우선가로', text: line('수주 우선가', win), q: win.q, here: near(win.q) },
+      { key: 'win', label: '수주 우선가로', text: line('수주 우선가', win), q: win.q, here: near(win.q),
+        warn: wr?.over ? `이 가격에서는 적자확률 ${pct(wr.loss, 0)}로 안전 기준(${pct(wr.target, 0)})을 넘어요.` : null },
     ],
   }
 }
@@ -79,7 +93,7 @@ export default function Conclusions({ data, onMove }) {
           <span className="tip-now">{tip.text}</span>
           {tip.options.map((o) => (
             <div className="tip-row" key={o.key}>
-              <span>{o.text}</span>
+              <span>{o.text}{o.warn && <span className="tip-warn">⚠ {o.warn}</span>}</span>
               {o.here ? <span className="tag ok">지금 여기</span>
                 : onMove && <button type="button" className="btn" onClick={() => onMove(o.q)}>{o.label}</button>}
             </div>
