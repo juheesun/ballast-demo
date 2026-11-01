@@ -110,7 +110,7 @@ def compare(body: CompareIn):
 
 @app.post("/api/scenario/margin-path")
 def scenario_margin_path(body: CompareIn):
-    """MVP2 · 계약~인도 달마다 마진 범위(10·50·90%)와 적자 확률. 기준 vs 시나리오. 계산은 backend/margin_path.py"""
+    """MVP2 · 계약~인도 달마다 마진 범위(10·50·90%)와 적자확률. 기준 vs 시나리오. 계산은 backend/margin_path.py"""
     _check(body.bid_id)
     return margin_path(be, body.bid_id, body.scenario.model_dump())
 

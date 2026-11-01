@@ -116,7 +116,7 @@ class Backend:
                 "margin_mean_now", "best_quote", "best_ratio", "best_ev", "band_lo", "band_hi", "recommended", "recommended_below_bep"]
         summary = {k: (bool(s[k]) if k == "recommended_below_bep" else _num(s[k])) for k in keys}
         summary["fx_assumed"] = _num(fx_s, 1)
-        summary["fx_breakeven"] = _num(s["bep"] * fx_s / s["quote_now"], 1)       # 이 제안가에서 매출 = 원가 가 되는 환율
+        summary["fx_breakeven"] = _num(s["bep"] * fx_s / s["quote_now"], 1)       # 이 견적가에서 매출 = 원가 가 되는 환율
         return {"source": self.source, "bid_id": bid_id, "scenario": sc.__dict__ | {"overrides": {}},
                 "summary": summary, "grid": grid}
 
@@ -132,7 +132,7 @@ class Backend:
         sc = self._scenario(params)
         key = ("curve", bid_id, json.dumps(sc.__dict__, sort_keys=True, default=str), round(quote_pct, 4))
         if key not in self._cache:
-            # 제안가가 기본 범위(시장가 -15%~+15%) 밖이어도 그래프에 보이도록 입찰마다 범위를 넓힌다
+            # 견적가가 기본 범위(시장가 -15%~+15%) 밖이어도 그래프에 보이도록 입찰마다 범위를 넓힌다
             r = self.raw.loc[bid_id]
             ratio = float(r.quote / r.market_price)
             lo, hi = min(0.85, ratio - 0.03), max(1.15, ratio + 0.03)
@@ -152,7 +152,7 @@ class Backend:
 
     @staticmethod
     def _move_quote(payload: dict, quote_pct: float) -> dict:
-        """곡선은 그대로 두고 '제안가' 위치만 옮겨, 그 견적가에서의 낙찰확률·기대가치 등을 곡선에서 읽는다."""
+        """곡선은 그대로 두고 '견적가' 위치만 옮겨, 그 견적가에서의 낙찰확률·기대가치 등을 곡선에서 읽는다."""
         s, g = dict(payload["summary"]), payload["grid"]
         ratio_new = s["ratio_now"] * (1 + quote_pct)
         xs = [r["ratio"] for r in g]

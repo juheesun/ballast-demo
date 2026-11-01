@@ -11,9 +11,9 @@
   --ink-3: #8190a5;
   --blue: #2f5fa8;          /* 사용자 말풍선·링크 */
   --blue-soft: #e8eff9;
-  --accent: #d9773f;        /* 강조(권장가·활성 메뉴·보내기) */
+  --accent: #d9773f;        /* 강조(이익 우선가·활성 메뉴·보내기) */
   --accent-soft: #fbeee4;
-  --loss: #c0392b;          /* 손실·주의 */
+  --loss: #c0392b;          /* 적자·주의 */
   --ok: #2e7d5b;
   --band: #dbe6f5;
   --base: #8d97a8;

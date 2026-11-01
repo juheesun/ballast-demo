@@ -16,7 +16,7 @@
 | GET | `/api/bids` | 분석 가능한 입찰 목록 (실제 10건) |
 | GET | `/api/bids/{bid_id}/curve` | 견적가별 곡선 + 요약. 쿼리: `comp_pct, steel_pct, fx_pct, fx_krw, delay_months` |
 | POST | `/api/scenario/compare` | 기준 vs 시나리오 곡선·요약·차이·기대가치 분해 |
-| GET | `/api/bids/{bid_id}/scenario-table` | 모든 프리셋의 낙찰확률·기대가치·손실확률 한 표 |
+| GET | `/api/bids/{bid_id}/scenario-table` | 모든 프리셋의 낙찰확률·기대가치·적자확률 한 표 |
 | GET | `/api/scenarios/presets` | 시나리오 버튼 목록 (화면의 버튼은 이 목록으로 그림) |
 | GET | `/api/fx/latest` | 최신 USD/KRW (market_monthly.json) |
 
@@ -34,13 +34,14 @@
 ### `GET /api/bids/{id}/curve` 응답 (요약)
 - `summary`: `quote_now, ratio_now, bep, bep_ratio, months, p_now, profit_now, ev_now, loss_prob_now, margin_mean_now, best_quote, best_ratio, best_ev, band_lo, band_hi, recommended, recommended_below_bep, fx_assumed, fx_breakeven`
 - `grid[]`: `ratio, quote, p, ev, ev_risk, loss_prob, margin_rule, margin_mean, margin_p10, margin_p50, margin_p90`
-- `recommended` = 기대가치가 최고점의 85% 이상인 구간의 하한 (A 의 정책). 기대가치가 모두 0 이하면 `null`.
-- `fx_breakeven` = 이 제안가에서 원화 매출 = 원가 가 되는 인도 시점 환율.
+- `recommended` = 기대가치가 최고점의 85% 이상인 범위(권장 범위)의 하한 (A 의 정책). 화면 이름은 **수주 우선가**. 기대가치가 모두 0 이하면 `null`.
+- `best_quote` = 기대가치 최고점. 화면 이름은 **이익 우선가**.
+- `fx_breakeven` = 이 견적가에서 원화 매출 = 원가 가 되는 인도 시점 환율 (화면 이름: 버틸 수 있는 환율).
 
 ### `POST /api/scenario/compare`
 요청: `{ "bid_id": "REAL-10", "scenario": { "comp_pct": -0.05, "steel_pct": 0.1 } }`
 응답: `{ source, bid_id, base, scenario, delta, decomposition }`
-- `decomposition`: 기대가치 변화 = 낙찰확률 효과 + 건당 이익 효과 (제안가 기준)
+- `decomposition`: 기대가치 변화 = 낙찰확률 효과 + 건당 이익 효과 (견적가 기준)
 
 ## MVP3·4 (담당 팀원이 채움 · 초안)
 
@@ -71,14 +72,14 @@
 ### POST /api/scenario/advice  (MVP2 · 결론 박스)
 요청은 `/api/scenario/compare` 와 같다. 응답: `verdict`(`level`: stop·up·down·go, `head` 결론 한 줄, `text`, `todo`),
 `fx_breakeven`(버틸 수 있는 환율), `fx_assumed`, `fx_gap`, `watch`(시나리오 표에서 기대가치가 가장 많이 줄어드는 조건 2개, 묶음별 1개씩 + 대응 `todo`).
-판단 기준은 `backend/chat.py` 의 `verdict_parts()` (견적가 < 손익분기 → 손해, 아니면 권장 구간 아래·위·안).
+판단 기준은 `backend/chat.py` 의 `verdict_parts()` (견적가 < 손익분기 → 손해, 아니면 권장 범위 아래·위·안).
 
 ### POST /api/scenario/hedge  (MVP2 · 환헤지 계산)
 요청: `{ "bid_id", "scenario": {...}, "ratio": 0.5 }`. 응답: `none`(헤지 없음)·`hedged`(헤지 적용) 각각 `loss_prob, margin_mean, margin_p10, margin_p90, fx_breakeven`.
 받을 달러의 ratio 만큼을 지금 조건의 환율로 고정한다고 보고, 헤지 비용은 0으로 가정한다. 계산은 `backend/margin_path.py`.
 
 ### 시나리오 조건에 `quote_pct` 추가
-`/api/scenario/compare` 의 `scenario` 와 `/api/bids/{id}/curve` 에 `quote_pct`(-0.3~0.3). 곡선은 그대로 두고 제안가 위치만 옮겨 그 견적가의 낙찰확률·기대가치를 읽는다.
+`/api/scenario/compare` 의 `scenario` 와 `/api/bids/{id}/curve` 에 `quote_pct`(-0.3~0.3). 곡선은 그대로 두고 견적가 위치만 옮겨 그 견적가의 낙찰확률·기대가치를 읽는다.
 
 ### GET /api/history  (MVP4 · 과거 이력)
 `data/dataset.json` 의 입찰 106건(실제 10 + 시나리오 96). 행: `id, origin(real|scenario), variant, date, shipyard, owner, quote, market, ratio, won, loss_reason, margin, note`.
@@ -88,7 +89,7 @@
 ## v0.3 추가 (MVP2 · 시나리오)
 
 ### POST /api/scenario/margin-path
-계약부터 인도까지 달마다 마진 범위. 계산은 `backend/margin_path.py` (modeling/ 의 MarginModel 과 같은 난수라 마지막 달 값 = 카드의 예상 마진·적자 확률).
+계약부터 인도까지 달마다 마진 범위. 계산은 `backend/margin_path.py` (modeling/ 의 MarginModel 과 같은 난수라 마지막 달 값 = 카드의 예상 마진·적자확률).
 요청: `/api/scenario/compare` 와 같음 → `{ "bid_id": "REAL-05", "scenario": { "fx_pct": -0.05 } }`
 응답: `{ source, bid_id, base, scenario, milestones }`
 - `base` / `scenario`: `{ quote, bep, months, points[] }`, `points[]` = `{ month, p10, p50, p90, mean, loss_prob }` (month 0 = 계약, months = 인도)
@@ -152,7 +153,7 @@
 `ship_type`("컨테이너선"), `size_teu`, `num_ships` 추가. 입찰 정보 줄에 "컨테이너선 15,500TEU · 2척"으로 보인다.
 
 ### POST /api/bids/{id}/risk  (MVP1 · 원가 통화·대금 분할·환헤지 반영)
-계산은 `backend/quote_risk.py`. 낙찰확률·기대가치·권장가는 `/curve` 와 같고, 환율·원가 위험만 아래 가정으로 다시 계산한다.
+계산은 `backend/quote_risk.py`. 낙찰확률·기대가치·이익 우선가·수주 우선가는 `/curve` 와 같고, 환율·원가 위험만 아래 가정으로 다시 계산한다.
 
 요청(전부 선택, 비우면 선종·규모별 기본값):
 ```json
