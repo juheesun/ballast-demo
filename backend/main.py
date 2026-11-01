@@ -177,4 +177,8 @@ if (_DIST / "index.html").exists():
         if path.startswith("api/"):
             raise _HTTPException(404)
         f = _DIST / path
-        return _FileResponse(f if path and f.is_file() else _DIST / "index.html")
+        if path and f.is_file():
+            return _FileResponse(f)
+        # index.html 은 브라우저가 매번 새로 확인하게 한다 → 다시 배포하면 새로고침만으로 새 화면이 뜬다
+        # (assets/ 의 js·css 는 파일 이름에 내용 해시가 붙어 바뀌므로 캐시해도 된다)
+        return _FileResponse(_DIST / "index.html", headers={"Cache-Control": "no-cache"})
