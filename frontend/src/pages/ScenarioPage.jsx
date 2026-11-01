@@ -205,7 +205,7 @@ export default function ScenarioPage() {
                       : adv.fx_gap < 0 ? `이 밑이면 적자 (지금보다 ${pct(adv.fx_gap, 0)})` : `지금 환율보다 ${pct(adv.fx_gap, 0)} 높아야 본전`} />
                 </div>
                 <p className="todo"><b>이렇게 해 보세요</b>{adv.verdict.todo}</p>
-                <p className="vb-note">판단 기준: 견적가가 손익분기 선가 아래면 손해, 아니면 권장 구간(기대가치가 최고점의 85% 이상) 아래·위·안. 최종 결정은 담당자가 합니다.</p>
+                <p className="vb-note">판단 기준: 견적가가 손익분기 선가 아래면 손해, 아니면 권장 범위(기대가치가 최고점의 85% 이상) 아래·위·안. 최종 결정은 담당자가 합니다.</p>
               </section>
             )
           })()}
@@ -247,7 +247,7 @@ export default function ScenarioPage() {
           {data && (
             <section className="card card-pad">
               <h2 className="card-title">근거 보기<span className="unit">기본은 접혀 있음</span></h2>
-              <Fold title="견적가별 기대가치 그래프" hint={data.scenario.summary.recommended != null ? `(권장가가 왜 ${usd(data.scenario.summary.recommended)}인지)` : ''}>
+              <Fold title="견적가별 기대가치 그래프" hint={data.scenario.summary.recommended != null ? `(이익 우선가 ${usd(data.scenario.summary.best_quote)}·수주 우선가 ${usd(data.scenario.summary.recommended)}가 어디서 나왔는지)` : ''}>
                 <Figure title="견적가별 기대가치: 기준 vs 바뀐 조건" unit="$M / 척"
                   note="회색 점선이 기준 조건, 파란 선이 바뀐 조건입니다. 세로선은 견적가(우리 견적가를 바꿔 물으면 함께 움직입니다).">
                   <EvChart data={data.scenario} base={data.base} height={340} />
@@ -276,7 +276,7 @@ export default function ScenarioPage() {
                   <Fold title="전체 시나리오 표" hint={`(${table.length - 1}개 조건)`}>
                     <p className="card-note">행을 누르면 그 조건이 적용됩니다.</p>
                     <table className="data">
-                      <thead><tr><th>조건</th><th>낙찰확률</th><th>예상 마진</th><th>적자확률</th><th>기대가치</th><th>변화</th><th>권장가</th></tr></thead>
+                      <thead><tr><th>조건</th><th>낙찰확률</th><th>예상 마진</th><th>적자확률</th><th>기대가치</th><th>변화</th><th>이익 우선가</th><th>수주 우선가</th></tr></thead>
                       <tbody>
                         {table.map((r) => (
                           <tr key={r.id} className={`row ${r.id === 'base' ? 'base' : ''} ${same(params, { ...ZERO, ...r.params }) ? 'on' : ''}`} onClick={() => setParams({ ...ZERO, ...r.params })}>
@@ -284,13 +284,14 @@ export default function ScenarioPage() {
                             <td className={r.margin_mean_now < 0 ? 'neg' : ''}>{pct(r.margin_mean_now, 1)}</td><td>{pct(r.loss_prob_now, 0)}</td>
                             <td>{r.ev_now.toFixed(1)}</td>
                             <td className={r.d_ev < 0 ? 'neg' : ''}>{r.id === 'base' ? '–' : signed(r.d_ev, 1)}</td>
+                            <td>{r.recommended != null ? usd(r.best_quote) : '–'}</td>
                             <td>{r.recommended != null ? usd(r.recommended) : '–'}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                     {fxNote && (
-                      <p className="note-line">※ 환율 −10%에서 권장가가 오히려 오르는 이유: 환율이 내리면 원화로 쓰는 원가가 달러로는 비싸져 손익분기 선가가 올라가고, 남는 견적가(권장가)도 함께 올라가요. 낙찰확률은 그대로라 기대가치는 줄어요.</p>
+                      <p className="note-line">※ 환율 −10%에서 이익·수주 우선가가 오히려 오르는 이유: 환율이 내리면 원화로 쓰는 원가가 달러로는 비싸져 손익분기 선가가 올라가고, 남는 견적가도 함께 올라가요. 낙찰확률은 그대로라 기대가치는 줄어요.</p>
                     )}
                     <p className="card-note">{health?.source === 'mock' ? '낙찰확률 모델이 연결되기 전의 예시 계산입니다. ' : ''}경쟁사·후판가·환율 조건의 반영 방식은 학습이 아니라 팀이 정한 규칙입니다. 발표에서 가정이라고 밝혀야 합니다.</p>
                   </Fold>

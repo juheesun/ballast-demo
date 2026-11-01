@@ -11,7 +11,7 @@ modeling/ 의 MarginModel 은 '원가 전부 원화 · 대금은 인도 때 한 
 · 헤지는 받을 달러의 일부를 입찰 시점 환율로 고정한다고 본다 (선물환 포인트·수수료는 0으로 가정).
 · 원가 비중·달러 비중·분할 비율·헤지 비율은 전부 팀 가정이고, 화면에서 '가정' 배지로 바로 고칠 수 있다.
 · 원가 비중·분할 비율·헤지 0%를 (원화 100%, 인도 100%)로 두면 MarginModel 결과와 정확히 같다 (응답의 simple).
-· 낙찰확률·기대가치·권장가는 엔진(backend/engine.py) 값을 그대로 쓴다. 기대가치 공식에는 환율이 들어가지 않는다.
+· 낙찰확률·기대가치·이익 우선가(기대가치 최고점)·수주 우선가(권장 범위 하한)는 엔진(backend/engine.py) 값을 그대로 쓴다. 기대가치 공식에는 환율이 들어가지 않는다.
 · 엔진 곡선(/curve·/compare·시나리오 표·챗봇)도 apply_defaults() 로 기본 가정을 적용한다 → 두 화면의 적자확률이 같다.
 """
 from __future__ import annotations
@@ -232,7 +232,7 @@ def evaluate(be, bid_id: str, assumptions: Optional[dict] = None) -> dict:
     q_orig = float(be.raw.loc[bid_id].quote)
     q_try = (assumptions or {}).get("quote")
     params = {"quote_pct": round(min(max(q_try / q_orig - 1, -0.3), 0.3), 4)} if q_try else None
-    cur = be.curve(bid_id, params)                               # 낙찰확률·기대가치·권장가 (엔진 값, 슬라이더 견적가 기준)
+    cur = be.curve(bid_id, params)                               # 낙찰확률·기대가치·이익/수주 우선가 (엔진 값, 슬라이더 견적가 기준)
     s0, grid0 = cur["summary"], cur["grid"]
     fx0, bep, months = float(s0["fx_assumed"]), float(s0["bep"]), int(round(s0["months"]))
     q_now, hedge, target = float(s0["quote_now"]), a["hedge"], a["loss_target"]
