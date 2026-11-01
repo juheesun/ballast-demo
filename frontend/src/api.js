@@ -1,7 +1,10 @@
 // 백엔드 호출은 전부 여기로 모은다. 명세: docs/api-spec.md
 async function request(url, opts) {
   const res = await fetch(url, opts)
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)          // 서버가 보낸 안내 문구(detail)가 있으면 그대로 보여 준다
+    throw new Error(typeof body?.detail === 'string' ? body.detail : `${res.status} ${res.statusText}`)
+  }
   return res.json()
 }
 

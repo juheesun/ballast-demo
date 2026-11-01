@@ -62,6 +62,10 @@ class RiskIn(BaseModel):
 def _check(bid_id: str):
     if bid_id not in set(b["id"] for b in be.bids()):
         raise HTTPException(404, f"입찰 {bid_id} 를 찾을 수 없습니다")
+    try:
+        be.eng.row(bid_id)
+    except KeyError:                                   # 목록에는 있지만 낙찰확률 모델 표에 없는 입찰 (예: REAL-07, 08)
+        raise HTTPException(422, f"{bid_id} 는 낙찰확률 모델 데이터에 없어 계산할 수 없어요. 다른 입찰을 골라 주세요.")
 
 
 @app.get("/api/health")
