@@ -11,7 +11,9 @@ modeling/ 의 MarginModel 은 '원가 전부 원화 · 대금은 인도 때 한 
 · 헤지는 받을 달러의 일부를 입찰 시점 환율로 고정한다고 본다 (선물환 포인트·수수료는 0으로 가정).
 · 원가 비중·달러 비중·분할 비율·헤지 비율은 전부 팀 가정이고, 화면에서 '가정' 배지로 바로 고칠 수 있다.
 · 원가 비중·분할 비율·헤지 0%를 (원화 100%, 인도 100%)로 두면 MarginModel 결과와 정확히 같다 (응답의 simple).
-· 낙찰확률·기대가치·이익 우선가(기대가치 최고점)·수주 우선가(권장 범위 하한)는 엔진(backend/engine.py) 값을 그대로 쓴다. 기대가치 공식에는 환율이 들어가지 않는다.
+· 낙찰확률·기대가치는 엔진(backend/engine.py) 값을 그대로 쓴다. 기대가치 공식에는 환율이 들어가지 않는다.
+· 권장 견적가 = 적자확률이 안전 기준(10%) 이하인 견적가 중 기대가치가 가장 높은 가격 (recommend()).
+  엔진의 원래 권장가(A 정책: 기대가치 85% 구간의 하한)는 recommended_ev_only 로 남긴다.
 · 엔진 곡선(/curve·/compare·시나리오 표·챗봇)도 apply_defaults() 로 기본 가정을 적용한다 → 두 화면의 적자확률이 같다.
 """
 from __future__ import annotations
@@ -35,7 +37,9 @@ USD_COST_AT = 0.5                 # 달러 원가를 치르는 시점 (납기 �
 MILESTONES = [("contract", "계약", 0.0, 0.2), ("start", "착공", 0.25, 0.2), ("launch", "진수", 0.75, 0.2), ("delivery", "인도", 1.0, 0.4)]
 FX_FLOOR = 0.5                    # 버틸 수 있는 환율이 입찰 환율의 절반 아래면 '사실상 없음'(None)으로 본다
 LOSS_HIGH = 0.25                  # 적자확률이 이 이상이면 '환율 위험 높음' (판단 요약 카드와 같은 기준)
-LOSS_TARGET = 0.10                # '안전 시작 견적가' 기준: 적자확률이 이 값 이하가 되는 가장 낮은 견적가
+LOSS_TARGET = 0.10                # 안전 기준: 권장 견적가·권장 범위는 적자확률이 이 값 이하인 견적가에서만 고른다
+BAND_SHARE = 0.85                 # 권장 범위: 기대가치가 최고점의 85% 이상 (A 정책의 구간 정의 그대로)
+WIN_MIN = 0.10                    # 권장 견적가의 낙찰확률이 이보다 낮으면 '안전하게 딸 수 있는 가격 없음'
 BACKTEST_FROM = "2010-01"
 
 _sim_cache: dict = {}
@@ -164,6 +168,40 @@ def fx_basis(be, bid_id: str, s: dict, a: dict) -> tuple:
     return float(s["bep"]) / (u + (1.0 - u) / g0), g0, fx_bid
 
 
+def safe_line(quotes, loss, target: float) -> Optional[float]:
+    """적자확률이 target 이하가 되는 가장 낮은 견적가 (견적가를 올릴수록 적자확률은 내려간다. 곡선 사이는 선형 보간)."""
+    ok = np.nonzero(np.asarray(loss) <= target)[0]
+    if not len(ok):
+        return None
+    j = int(ok[0])
+    return float(quotes[0]) if j == 0 else float(np.interp(target, [loss[j], loss[j - 1]], [quotes[j], quotes[j - 1]]))
+
+
+def recommend(quotes, ev, p, loss, target: float = LOSS_TARGET) -> dict:
+    """권장 견적가 = 적자확률 target 이하에서 기대가치가 가장 높은 견적가.
+    기대가치 곡선은 봉우리가 하나라서, 결과는 '기대가치 최고점'과 '적자확률 target 선' 중 높은 쪽이 된다.
+    권장 범위 = 기대가치가 최고점의 85% 이상이면서 적자확률 target 이하. 아래 끝은 꼭 따야 할 때 내려갈 수 있는 최저선.
+    권장 견적가의 낙찰확률이 WIN_MIN 미만이거나 기대가치가 0 이하면 '안전하게 딸 수 있는 가격 없음'(recommended=None)."""
+    quotes, ev, p, loss = (np.asarray(x, float) for x in (quotes, ev, p, loss))
+    i = int(np.argmax(ev))
+    best, safe = float(quotes[i]), safe_line(quotes, loss, target)
+    out = {"best_quote": best, "safe_quote": safe, "recommended": None, "band_lo": None, "band_hi": None,
+           "no_safe_price": True, "rec_needed": None, "rec_p": None, "rec_ev": None, "rec_loss": None, "loss_target": target}
+    if safe is None or ev[i] <= 0:
+        return out
+    rec = max(best, safe)
+    at = lambda arr: float(np.interp(rec, quotes, arr))
+    out.update(rec_needed=_r(rec, 2), rec_p=_r(at(p)), rec_ev=_r(at(ev), 3), rec_loss=_r(at(loss)))
+    if at(p) < WIN_MIN or at(ev) <= 0:
+        return out                                              # 안전선까지 올리면 사실상 못 딴다
+    band = quotes[ev >= BAND_SHARE * ev[i]]
+    lo, hi = max(safe, float(band.min())), float(band.max())
+    if lo > hi:                                                 # 안전선이 기대가치 85% 범위보다 위 → 권장 견적가 한 점
+        lo = hi = rec
+    out.update(recommended=_r(rec, 2), band_lo=_r(min(lo, rec), 2), band_hi=_r(max(hi, rec), 2), no_safe_price=False)
+    return out
+
+
 def apply_defaults(be, bid_id: str, payload: dict) -> dict:
     """엔진 곡선 응답의 환율·원가 위험 값(적자확률·마진·버틸 수 있는 환율)을 기본 가정으로 다시 계산한다.
     반사실 화면·챗봇도 견적리스크 화면과 같은 적자확률을 쓰게 하려는 것. 예전 가정 값은 *_simple 로 남긴다.
@@ -187,6 +225,10 @@ def apply_defaults(be, bid_id: str, payload: dict) -> dict:
     s.update(loss_prob_simple=s["loss_prob_now"], fx_breakeven_simple=s["fx_breakeven"],
              loss_prob_now=_r((m < 0).mean()), margin_mean_now=_r(m.mean()),
              fx_breakeven=_r(breakeven_fx(q, bep, usd, a, a["hedge"], fx_bid, g0), 1), krw_cost_share=_r(1 - usd))
+    # 권장 견적가·권장 범위를 적자확률 기준까지 넣어 다시 정한다 (엔진 원래 값은 *_ev_only 로 남김)
+    s.update(recommended_ev_only=s.get("recommended"), band_lo_ev_only=s.get("band_lo"), band_hi_ev_only=s.get("band_hi"))
+    s.update(recommend(quotes, [r["ev"] for r in grid], [r["p"] for r in grid], [r["loss_prob"] for r in grid]))
+    s["recommended_below_bep"] = s["recommended"] is not None and s["recommended"] < s["bep"]
     return payload
 
 
@@ -232,7 +274,7 @@ def evaluate(be, bid_id: str, assumptions: Optional[dict] = None) -> dict:
     q_orig = float(be.raw.loc[bid_id].quote)
     q_try = (assumptions or {}).get("quote")
     params = {"quote_pct": round(min(max(q_try / q_orig - 1, -0.3), 0.3), 4)} if q_try else None
-    cur = be.curve(bid_id, params)                               # 낙찰확률·기대가치·이익/수주 우선가 (엔진 값, 슬라이더 견적가 기준)
+    cur = be.curve(bid_id, params)                               # 낙찰확률·기대가치 (엔진 값, 슬라이더 견적가 기준)
     s0, grid0 = cur["summary"], cur["grid"]
     fx0, bep, months = float(s0["fx_assumed"]), float(s0["bep"]), int(round(s0["months"]))
     q_now, hedge, target = float(s0["quote_now"]), a["hedge"], a["loss_target"]
@@ -257,12 +299,9 @@ def evaluate(be, bid_id: str, assumptions: Optional[dict] = None) -> dict:
 
     m_now = at_quote(q_now)
     loss_now = float((m_now < 0).mean())
-    # 안전 시작 견적가: 적자확률 ≤ 기준 이 되는 가장 낮은 견적가 (곡선 사이는 선형 보간)
-    safe = None
-    ok = np.nonzero(loss <= target)[0]
-    if len(ok):
-        j = int(ok[0])
-        safe = float(quotes[0]) if j == 0 else float(np.interp(target, [loss[j], loss[j - 1]], [quotes[j], quotes[j - 1]]))
+    # 권장 견적가·권장 범위: 이 화면의 가정(원가 구성·분할·헤지·안전 기준)으로 다시 정한다
+    reco = recommend(quotes, [r["ev"] for r in grid0], p, loss, target)
+    safe = reco["safe_quote"]                                  # 적자확률이 기준 이하가 되는 가장 낮은 견적가
     interp = lambda q, k: float(np.interp(q, quotes, [r[k] for r in grid0]))
 
     # 판단 도구: 견적가를 올려서 기준을 맞출지, 헤지를 늘려서 맞출지
@@ -297,21 +336,20 @@ def evaluate(be, bid_id: str, assumptions: Optional[dict] = None) -> dict:
 
     prof_ship = (q_now * R - bep * C) * eok                                 # 척당 이익 (억 원, 시뮬레이션별)
     cost_total = bep * eok
-    summary = {k: s0[k] for k in ("quote_now", "ratio_now", "bep", "bep_ratio", "p_now", "ev_now", "best_quote",
-                                  "band_lo", "band_hi", "recommended", "recommended_below_bep")}
+    summary = {k: s0[k] for k in ("quote_now", "ratio_now", "bep", "bep_ratio", "p_now", "ev_now", "recommended_ev_only")}
+    summary.update(reco)
     summary.update(quote_orig=_r(q_orig, 2), months=months, fx_assumed=_r(fx0, 1), loss_prob_now=_r(loss_now), margin_mean_now=_r(m_now.mean()),
                    margin_p10_now=_r(np.percentile(m_now, 10)), margin_p90_now=_r(np.percentile(m_now, 90)),
                    ev_risk_now=_r(s0["p_now"] * float((q_now * R - bep * C).mean()), 3),
                    fx_breakeven=_r(breakeven_fx(q_now, bep, usd, a, hedge, fx0), 1),
-                   krw_cost_share=_r(1 - usd), safe_quote=_r(safe, 2),
-                   safe_ratio=_r(safe / (q_now / s0["ratio_now"])) if safe is not None else None)
+                   krw_cost_share=_r(1 - usd))
     money = {"fx": _r(fx0, 1), "num_ships": ship["num_ships"], "quote_krw": _r(q_now * eok, 0),
              "cost_total": _r(cost_total, 0),
              "cost_items": [{**c, "krw": _r(cost_total * c["share"], 0)} for c in a["costs"]],
              "profit_ship_mean": _r(prof_ship.mean(), 0), "profit_ship_p10": _r(np.percentile(prof_ship, 10), 0),
              "profit_ship_p90": _r(np.percentile(prof_ship, 90), 0),
              "profit_total_mean": _r(prof_ship.mean() * ship["num_ships"], 0),
-             "safe_quote_krw": _r(safe * eok, 0) if safe is not None else None}
+             "rec_krw": _r(reco["recommended"] * eok, 0) if reco["recommended"] is not None else None}
     return {"source": be.source, "bid_id": bid_id, "ship": ship, "assumptions": a, "notes": notes,
             "summary": summary, "grid": grid, "money": money, "simple": simple, "steps": steps,
             "verdict": fx_verdict(q_now, bep, loss_now, target, summary["fx_breakeven"], fx0, raise_opt, hedge_opt, hedge),
