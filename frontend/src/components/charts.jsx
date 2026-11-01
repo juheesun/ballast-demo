@@ -4,6 +4,7 @@ import {
 import { usd, signed, pct } from '../format.js'
 
 const INK = '#0f1a2e', LINE = '#2f5fa8', ACCENT = '#d9773f', LOSS = '#c0392b', BASE = '#8d97a8', BAND = '#dbe6f5', MUTED = '#8190a5', RULE = '#e1e6ee'
+export const COLORS = { INK, LINE, ACCENT, LOSS, BASE, BAND, MUTED }          // 범례(Legend)가 그래프와 같은 색을 쓰도록
 const marketOf = (s) => s.quote_now / s.ratio_now
 const toX = (ratio) => (ratio - 1) * 100                         // 시장 기준가 대비 %
 const xOfQuote = (s, q) => (q / marketOf(s) - 1) * 100
@@ -67,7 +68,7 @@ export function EvChart({ data, base = null, height = 380 }) {
         {s.band_lo != null && <ReferenceArea x1={xOfQuote(s, s.band_lo)} x2={xOfQuote(s, s.band_hi)} fill={BAND} fillOpacity={0.75} stroke="none" />}
         <ReferenceLine y={0} stroke={INK} strokeWidth={1} />
         {bepX > x0 && <ReferenceLine x={bepX} stroke={LOSS} strokeDasharray="4 3" label={{ value: '손익분기', position: 'insideBottomLeft', fill: LOSS, fontSize: 11.5, dy: -6, dx: 4 }} />}
-        <ReferenceLine x={nowX} stroke={INK} strokeWidth={1.4} label={{ value: '제안가', position: recLeft ? 'insideTopRight' : 'insideTopLeft', fill: INK, fontSize: 11.5, dy: -16 }} />
+        <ReferenceLine x={nowX} stroke={INK} strokeWidth={1.4} label={{ value: '견적가', position: recLeft ? 'insideTopRight' : 'insideTopLeft', fill: INK, fontSize: 11.5, dy: -16 }} />
         {base && <Line dataKey="base_ev" stroke={BASE} strokeWidth={1.5} strokeDasharray="5 4" dot={false} isAnimationActive={false} />}
         <Line dataKey="ev" stroke={LINE} strokeWidth={2.4} dot={false} isAnimationActive={false} />
         {rec && <ReferenceDot x={rec.x} y={rec.ev} r={5.5} fill={ACCENT} stroke="#fff" strokeWidth={1.5}
@@ -80,7 +81,7 @@ export function EvChart({ data, base = null, height = 380 }) {
   )
 }
 
-/** 인도 시점 마진 범위(10~90%)와 중앙값. 0% 아래는 손실. */
+/** 인도 시점 마진 범위(10~90%)와 중앙값. 0% 아래는 적자. */
 export function MarginBandChart({ data, height = 300 }) {
   const s = data.summary
   const rows = data.grid.map((g) => ({ x: toX(g.ratio), quote: g.quote, band: [g.margin_p10 * 100, g.margin_p90 * 100], p50: g.margin_p50 * 100, p10: g.margin_p10 * 100, p90: g.margin_p90 * 100, loss: g.loss_prob }))
@@ -106,8 +107,8 @@ export function MarginBandChart({ data, height = 300 }) {
   )
 }
 
-/** 견적가별 환율·원가 손실 확률 */
-export function LossChart({ data, height = 300 }) {
+/** 견적가별 환율·원가 적자확률. target(안전 기준)과 safe(안전 시작 견적가)를 주면 점선으로 표시 */
+export function LossChart({ data, target = null, safe = null, height = 300 }) {
   const s = data.summary
   const rows = data.grid.map((g) => ({ x: toX(g.ratio), quote: g.quote, loss: g.loss_prob * 100 }))
   const [x0, x1] = xDomain(rows)
@@ -119,8 +120,10 @@ export function LossChart({ data, height = 300 }) {
         <XAxis type="number" dataKey="x" domain={[x0, x1]} ticks={xTicks(rows)} tickFormatter={tickX} {...axis} />
         <YAxis width={44} domain={[0, top]} {...axis} tickFormatter={(v) => `${v}%`} />
         <Area dataKey="loss" stroke={LOSS} strokeWidth={2} fill={LOSS} fillOpacity={0.1} isAnimationActive={false} />
-        <ReferenceLine x={toX(s.ratio_now)} stroke={INK} strokeWidth={1.2} label={{ value: `제안가 ${(s.loss_prob_now * 100).toFixed(0)}%`, position: 'insideTopRight', fill: INK, fontSize: 11.5, dy: 2 }} />
-        <Tooltip cursor={{ stroke: INK, strokeWidth: 0.8 }} content={<Tip extra={(r) => <div style={{ color: '#4b5260' }}>손실 확률 {r.loss.toFixed(1)}%</div>} />} />
+        {target != null && <ReferenceLine y={target * 100} stroke={MUTED} strokeDasharray="4 3" label={{ value: `기준 ${(target * 100).toFixed(0)}%`, position: 'insideTopLeft', fill: MUTED, fontSize: 11.5 }} />}
+        {safe != null && <ReferenceLine x={xOfQuote(s, safe)} stroke={ACCENT} strokeDasharray="4 3" ifOverflow="hidden" />}
+        <ReferenceLine x={toX(s.ratio_now)} stroke={INK} strokeWidth={1.2} label={{ value: `견적가 ${(s.loss_prob_now * 100).toFixed(0)}%`, position: 'insideTopRight', fill: INK, fontSize: 11.5, dy: 2 }} />
+        <Tooltip cursor={{ stroke: INK, strokeWidth: 0.8 }} content={<Tip extra={(r) => <div style={{ color: '#4b5260' }}>적자확률 {r.loss.toFixed(1)}%</div>} />} />
       </ComposedChart>
     </ResponsiveContainer>
   )

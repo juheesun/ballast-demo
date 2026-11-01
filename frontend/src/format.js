@@ -5,3 +5,5 @@ export const signed = (v, d = 1, unit = '') => (v == null ? '–' : `${v > 0 ? '
 // 시장 기준가 대비 견적 비율(1.075) → "+7.5%"
 export const vsMarket = (ratio, d = 1) => (ratio == null ? '–' : signed((ratio - 1) * 100, d, '%'))
 export const krw = (v) => (v == null ? '–' : `${Math.round(v).toLocaleString('ko-KR')}원`)
+// 억 원 (2809.5 → "2,810억 원", -237 → "−237억 원")
+export const eok = (v) => (v == null ? '–' : `${v < 0 ? '−' : ''}${Math.round(Math.abs(v)).toLocaleString('ko-KR')}억 원`)

@@ -14,8 +14,9 @@ export default function BidBar() {
           {bids.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
         </select>
       </div>
+      {bid.ship_type && <Item k="선종·규모">{bid.ship_type} {bid.size_teu ? `${bid.size_teu.toLocaleString('ko-KR')}TEU` : ''} · {bid.num_ships}척</Item>}
       <Item k="시장 기준가">{usd(bid.market_price)}</Item>
-      <Item k="제안가">{usd(bid.quote_now)} <span style={{ fontWeight: 400, color: 'var(--ink-3)' }}>({vsMarket(bid.ratio_now)})</span></Item>
+      <Item k="견적가">{usd(bid.quote_now)} <span style={{ fontWeight: 400, color: 'var(--ink-3)' }}>({vsMarket(bid.ratio_now)})</span></Item>
       <Item k="손익분기 선가">{usd(bid.bep)}</Item>
       <Item k="납기까지">{bid.lead_months}개월</Item>
       <Item k="입찰 시점 환율">{krw(bid.expected_fx)}</Item>
