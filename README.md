@@ -54,8 +54,9 @@ row = df[df.variant == "REAL"].iloc[0]
 grid = price_grid(row, lo=0.85, hi=1.15, n=61)    # 견적가만 바꾼 61개
 p = m.predict_proba(grid)                         # 낙찰확률
 ev = p * (grid.quote_usd_mn - grid.bep_usd_mn)    # 기대가치 ($mn/척)
-band = grid.quote_usd_mn[ev >= 0.85 * ev.max()]   # 권장 구간
-recommended = band.min()                          # 권장가 = 권장 구간 하한
+band = grid.quote_usd_mn[ev >= 0.85 * ev.max()]   # 권장 범위
+recommended = band.min()                          # 수주 우선가 = 권장 범위 하한
+best = grid.quote_usd_mn[ev.argmax()]             # 이익 우선가 = 기대가치 최고점
 ```
 
 - 전처리는 반드시 `features.py`를 거칠 것. 각자 따로 하면 모델 결과가 서로 안 맞습니다.
@@ -68,7 +69,7 @@ recommended = band.min()                          # 권장가 = 권장 구간 �
 | 주 모델 | 로지스틱 회귀, ship 피처 세트 (가격 비율, 리드타임, 크기, 척수, 사양 2종, 신규 선주) |
 | 평가 | 실제 건 하나씩 빼고 학습 (8-fold). Brier 0.158 (기준선 0.202), ECE 0.085 |
 | 확률 보정 | 하지 않음 (Platt 보정 시 반대로 과소확신) |
-| 권장가 정책 | 기대가치 봉우리 대신 **권장 구간 하한** (7건 중 7건 낙찰) |
+| 가격 추천 정책 | 기대가치 봉우리 대신 **권장 범위 하한** (7건 중 7건 낙찰). 화면에서는 이 값을 **수주 우선가**, 봉우리를 **이익 우선가**로 함께 보여 준다 |
 | LightGBM | 확률을 과신해서 비교용으로만 사용 |
 
 자세한 과정·한계는 `modeling/processed/*_report.txt`(실행 후 생성)와 노션 정리 페이지를 참고하세요.
