@@ -8,6 +8,7 @@
   환율(% · 원 · 원 변화)     "환율 1,300원이면", "환율 100원 떨어지면", "달러 강세", "원화 10% 절상"
   납기 지연(개월·달·년)       "납기 6개월 늦어지면", "인도가 석 달 밀리면", "1년 반 지연"
   우리 견적가(% · $M)        "견적가 3% 낮추면", "견적을 $5M 깎으면", "180M으로 내면", "우리가 경쟁사보다 2% 비싸면"
+  환헤지(%)                 "대금 50%를 환헤지하면", "헤지 30%면" → 조건은 그대로 두고 헤지 결과만 답한다 (margin_path.hedge)
 숫자 없이 방향만 말하면 % 조건은 5%, 납기는 3개월로 가정하고 notes 로 알린다.
 여러 조건을 섞어도 되고("후판가랑 환율이 5%씩 오르면"), 조건 이름 없이 숫자만 말하면("그럼 10%면?") 지금 걸려 있는 조건 하나에 적용한다.
 "환율 조건 빼줘"는 그 조건만 빼고, "초기화"는 전부 뺀다. "지금 낙찰확률은?"·"권장가 얼마야?"에는 현재 조건의 결과를 요약해 답한다.
@@ -16,9 +17,12 @@
 나중에 Claude API 로 바꾸더라도, answer() 의 출력 형식만 지키면 화면은 그대로다.
 """
 from __future__ import annotations
+import math
 import re
 import traceback
 from typing import Optional
+
+from .margin_path import hedge as hedge_calc
 
 ZERO = {"comp_pct": 0.0, "steel_pct": 0.0, "fx_pct": 0.0, "fx_krw": None, "delay_months": 0, "quote_pct": 0.0}
 
@@ -53,6 +57,8 @@ HELP = re.compile(r"안녕|하이|헬로|도움|도와|사용법|뭘\s*(?:할|�
 DECIDE = re.compile(r"따야|따도|해야\s*(?:돼|되|할)|할까|괜찮|들어가도|입찰해도|내도\s*(?:돼|되)|어떻게\s*해")
 WORST = re.compile(r"최악|최선|베스트|워스트|비관|낙관")
 THANKS = re.compile(r"고마|감사|땡큐|ㄳ|ㄱㅅ")
+HEDGE_PCT = re.compile(r"(\d+(?:\.\d+)?)\s*%\s*(?:를|을|만|만큼|정도)?\s*(?:환\s*)?(?:헤지|헷지)"
+                       r"|(?:환\s*)?(?:헤지|헷지)(?:\s*비율)?\s*(?:을|를|은|는|이|가|로)?\s*(\d+(?:\.\d+)?)\s*%")
 
 LABEL = {"comp_pct": "경쟁사 견적", "steel_pct": "후판가", "fx_pct": "환율", "quote_pct": "우리 견적가", "delay_months": "납기 지연"}
 LIMITS = {"comp_pct": (-0.5, 0.5), "steel_pct": (-0.5, 1.0), "fx_pct": (-0.5, 0.5), "quote_pct": (-0.3, 0.3)}
@@ -138,6 +144,10 @@ def parse(text: str, state: Optional[dict] = None) -> dict:
            "reset": bool(RESET.search(t)), "intent": None}
     if out["reset"]:
         return out
+    hm = HEDGE_PCT.search(t)
+    if hm:                                       # 헤지 비율은 조건이 아니라 따로 계산하므로 문장에서 떼어 낸다
+        out["special"]["hedge"] = float(hm.group(1) or hm.group(2)) / 100
+        t = (t[:hm.start()] + " " + t[hm.end():]).strip()
     marks = []
     for m in _ANCHOR_RE.finditer(t):
         kind = m.lastgroup
@@ -295,7 +305,7 @@ def parse(text: str, state: Optional[dict] = None) -> dict:
 
     # ── 모델에 없는 질문은 솔직하게 알린다 ──
     if re.search(r"헤지|헷지", t):
-        out["notes"].append("환헤지는 아직 모델에 들어 있지 않아 계산하지 못해요. 지금은 환율이 바뀌는 경우만 볼 수 있어요.")
+        out["notes"].append("헤지 비율을 %로 같이 말해 주세요. (예: 대금 50%를 환헤지하면?) 오른쪽 '환헤지 계산'에서도 바로 볼 수 있어요.")
     if re.search(r"실주|과거|비슷한|유사|이력|지난\s*입찰", t):
         out["notes"].append("지난 입찰 결과는 위쪽 '과거 이력' 메뉴에서 볼 수 있어요.")
     if re.search(r"선주|LNG|lng|스크러버|사양|연료|척수|선박\s*크기|TEU|teu", t):
@@ -308,7 +318,7 @@ def parse(text: str, state: Optional[dict] = None) -> dict:
     if ask_which and not out["notes"]:                         # 다른 안내(환헤지 등)가 이미 있으면 그쪽이 답
         out["notes"].append("어떤 조건에 적용할지 같이 말해 주세요. (예: 환율 10% 떨어지면, 후판가 10% 오르면)")
 
-    if not out["updates"] and not out["special"] and not out["removed"]:
+    if not out["updates"] and not set(out["special"]) - {"hedge"} and not out["removed"]:
         if DECIDE.search(t):
             out["intent"] = "decide"
         elif WORST.search(t):
@@ -336,7 +346,10 @@ def describe(params: dict) -> list:
 
 
 def _p(v: Optional[float], d: int = 0) -> str:
-    return "–" if v is None else f"{v * 100:.{d}f}%"
+    if v is None:
+        return "–"
+    k = 10 ** d                                            # 화면(toFixed)과 같은 반올림: 96.5% → 97%
+    return f"{math.floor(v * 100 * k + 0.5 + 1e-6) / k:.{d}f}%"
 
 
 def _m(v: Optional[float]) -> str:
@@ -348,10 +361,11 @@ def _metrics(s: dict) -> list:
             {"label": "적자확률", "value": _p(s["loss_prob_now"])}]
 
 
-def _reply(params: dict, prev: dict, lines: list, notes=(), metrics=(), understood=(), changed=False, source=None) -> dict:
+def _reply(params: dict, prev: dict, lines: list, notes=(), metrics=(), understood=(), changed=False, source=None, todo=None) -> dict:
+    """todo: 답 끝에 붙이는 '이렇게 해 보세요' 한 줄 (화면이 따로 강조해 보여 준다)."""
     p = params if changed else prev
     return {"params": p, "active": describe(p), "understood": list(understood), "notes": list(notes), "metrics": list(metrics),
-            "lines": lines, "changed": changed, **({"source": source} if source else {})}
+            "lines": lines, "changed": changed, "todo": todo, **({"source": source} if source else {})}
 
 
 def _resolve_special(be, bid_id: str, prev: dict, parsed: dict, notes: list) -> dict:
@@ -376,7 +390,7 @@ def _resolve_special(be, bid_id: str, prev: dict, parsed: dict, notes: list) -> 
             up["quote_pct"] = round(v, 4)
             parsed["labels"]["quote_pct"] = f"우리 견적가 {_m(q0 * (1 + v))}"
         else:
-            notes.append(f"우리 견적가는 제안가({_m(q0)}) 대비 {lo * 100:+.0f}% ~ {hi * 100:+.0f}% 범위만 계산해요.")
+            notes.append(f"우리 견적가는 지금 견적가({_m(q0)}) 대비 {lo * 100:+.0f}% ~ {hi * 100:+.0f}% 범위만 계산해요.")
     if "comp_usd" in sp:
         v = sp["comp_usd"] / float(raw.market_price)              # 경쟁사 견적은 시장 기준가 근처라고 보고 % 로 바꾼다
         lo, hi = LIMITS["comp_pct"]
@@ -393,8 +407,8 @@ def _summary_lines(be, bid_id: str, params: dict) -> tuple:
     b, s = cmp_["base"]["summary"], cmp_["scenario"]["summary"]
     active = describe(params)
     head = f"지금 조건({', '.join(c['label'] for c in active)})" if active else "지금은 기준 조건"
-    lines = [f"{head}에서 제안가 {_m(s['quote_now'])} 기준으로 낙찰확률 {_p(s['p_now'])}, 예상 마진 {_p(s['margin_mean_now'], 1)}, "
-             f"적자 확률 {_p(s['loss_prob_now'])}예요.",
+    lines = [f"{head}에서 견적가 {_m(s['quote_now'])} 기준으로 낙찰확률 {_p(s['p_now'])}, 예상 마진 {_p(s['margin_mean_now'], 1)}, "
+             f"적자확률 {_p(s['loss_prob_now'])}예요.",
              f"기대가치는 척당 {_m(s['ev_now'])}, 손익분기 선가는 {_m(s['bep'])}예요."]
     if s["recommended"] is not None:
         band = f" (권장 구간 {_m(s['band_lo'])} ~ {_m(s['band_hi'])})" if s.get("band_hi") is not None else ""
@@ -406,21 +420,75 @@ def _summary_lines(be, bid_id: str, params: dict) -> tuple:
     return lines, _metrics(s), cmp_["source"]
 
 
+# 화면 '주의할 것과 할 일': 시나리오 표의 조건 묶음별 대응 (팀 가정. 문구만 여기서 고친다)
+TODO_BY_GROUP = {
+    "경쟁": "경쟁사 견적 동향을 먼저 확인하고, 권장 구간 하한까지 낮출 여유를 미리 정해 두세요.",
+    "환율": "선물환 헤지 비율을 높이거나 선수금 비중을 키워 환율 하락에 대비하세요.",
+    "비용": "후판 선구매나 가격 연동 조항으로 원가 상승을 묶어 두세요.",
+    "납기": "공정 여유를 확보하고 계약서의 지체 조건을 확인하세요.",
+    "복합": "경쟁사 동향 확인과 후판 선구매를 함께 검토하세요.",
+}
+LOSS_HIGH = 0.25       # 이 이상이면 '들어갈 만해요'여도 할 일로 환헤지를 권한다
+
+
+def verdict_parts(s: dict) -> dict:
+    """결론 한 줄. 견적가가 손익분기 아래 / 권장 구간 아래·위·안 으로 나눈다. 화면 결론 박스와 챗봇이 같이 쓴다.
+    level: stop(따면 손해) · up(올려도 됨) · down(낮추세요) · go(들어갈 만함)"""
+    q, lo, hi, bep = s["quote_now"], s.get("band_lo"), s.get("band_hi"), s["bep"]
+    band = f"권장 구간({_m(lo)} ~ {_m(hi)})" if lo is not None else ""
+    if q < bep:
+        return {"level": "stop", "head": "따면 손해예요",
+                "text": f"지금 견적가 {_m(q)}는 손익분기 선가 {_m(bep)}보다 낮아서, 따내면 손해예요.",
+                "todo": f"견적을 손익분기 {_m(bep)} 위로 올리거나, 들어가지 않는 쪽을 검토해 보세요."}
+    if lo is None:
+        return {"level": "stop", "head": "따면 손해예요",
+                "text": "이 조건에서는 어느 견적가에서도 기대가치가 0 이하예요. 들어가더라도 남는 게 없을 가능성이 커요.",
+                "todo": "원가(후판·환율) 조건을 다시 점검하고, 조건이 나아질 때까지 입찰을 미루는 쪽을 검토해 보세요."}
+    if q < lo - 0.05:
+        return {"level": "up", "head": "견적을 올려도 돼요",
+                "text": f"지금 견적가는 {band}보다 싸요. 견적을 올려도 기대가치가 비슷하거나 더 커요.",
+                "todo": f"견적을 권장가 {_m(lo)} 근처까지 올려 보세요."}
+    if q > hi + 0.05:
+        return {"level": "down", "head": "낮추세요",
+                "text": f"지금 견적가는 {band}보다 비싸요. 낮추면 낙찰 가능성을 높일 수 있어요.",
+                "todo": f"견적을 {band} 안으로 낮춰 보세요. 하한은 {_m(lo)}예요."}
+    todo = (f"적자확률이 {_p(s['loss_prob_now'])}로 높아요. 환헤지 비율을 높여 환율 하락에 대비해 보세요."
+            if s["loss_prob_now"] >= LOSS_HIGH else "지금 견적을 유지하면서 경쟁사 견적과 환율 움직임을 지켜보세요.")
+    return {"level": "go", "head": "이 가격으로 들어갈 만해요", "text": f"지금 견적가는 {band} 안이라 숫자로는 들어갈 만해요.", "todo": todo}
+
+
 def _verdict(be, bid_id: str, params: dict) -> str:
     """'이 입찰 따야 돼?' → 결정은 담당자가 하고, 숫자로 본 판단 근거만 한 줄로."""
+    v = verdict_parts(be.compare(bid_id, params)["scenario"]["summary"])
+    return v["text"] + " (최종 결정은 숫자에 안 잡히는 요인까지 보고 담당자가 판단해 주세요.)"
+
+
+def advice(be, bid_id: str, params: dict) -> dict:
+    """시나리오 화면 위쪽: 결론 박스 · 버틸 수 있는 환율 · 주의할 것과 할 일(표에서 기대가치가 가장 많이 줄어드는 조건 2개)."""
     s = be.compare(bid_id, params)["scenario"]["summary"]
-    q, lo, hi = s["quote_now"], s.get("band_lo"), s.get("band_hi")
-    if q < s["bep"]:
-        v = f"지금 제안가 {_m(q)}는 손익분기 선가 {_m(s['bep'])}보다 낮아서, 따내면 손해예요. 견적을 올리거나 들어가지 않는 쪽을 검토하세요."
-    elif lo is None:
-        v = "이 조건에서는 어느 견적가에서도 기대가치가 0 이하예요. 들어가더라도 남는 게 없을 가능성이 커요."
-    elif q < lo - 0.05:
-        v = f"지금 제안가는 권장 구간({_m(lo)} ~ {_m(hi)})보다 싸요. 견적을 올려도 기대가치가 비슷하거나 더 커요."
-    elif q > hi + 0.05:
-        v = f"지금 제안가는 권장 구간({_m(lo)} ~ {_m(hi)})보다 비싸요. 낮추면 낙찰 가능성을 높일 수 있어요."
-    else:
-        v = f"지금 제안가는 권장 구간({_m(lo)} ~ {_m(hi)}) 안이라 숫자로는 들어갈 만해요."
-    return v + " (최종 결정은 숫자에 안 잡히는 요인까지 보고 담당자가 판단해 주세요.)"
+    rows = sorted((r for r in be.scenario_table(bid_id) if r["id"] != "base" and (r["d_ev"] or 0) < 0), key=lambda r: r["d_ev"])
+    worst = list({r["group"]: r for r in reversed(rows)}.values())[::-1]       # 묶음(경쟁·환율…)마다 가장 나쁜 조건 하나씩
+    watch = [{"id": r["id"], "label": r["label"], "group": r["group"], "params": r["params"], "d_ev": r["d_ev"],
+              "todo": TODO_BY_GROUP.get(r["group"], "")} for r in sorted(worst, key=lambda r: r["d_ev"])[:2]]
+    fx_be, fx = s.get("fx_breakeven"), s.get("fx_assumed")
+    return {"source": be.source, "bid_id": bid_id, "verdict": verdict_parts(s), "fx_breakeven": fx_be, "fx_assumed": fx,
+            "fx_gap": round(fx_be / fx - 1, 4) if fx_be and fx else None, "watch": watch}
+
+
+def _hedge_lines(be, bid_id: str, params: dict, h: float) -> tuple:
+    r = hedge_calc(be, bid_id, params, h)
+    a, b = r["none"], r["hedged"]
+    lines = [f"받을 달러의 {h * 100:.0f}%를 지금 환율로 고정(환헤지)하면 적자확률은 {_p(a['loss_prob'])} → {_p(b['loss_prob'])}, "
+             f"예상 마진은 {_p(a['margin_mean'], 1)} → {_p(b['margin_mean'], 1)}예요."]
+    if b["loss_prob"] > a["loss_prob"]:                     # 평균 마진이 마이너스면 헤지가 '운 좋게 환율이 오르는 경우'까지 막는다
+        lines.append("예상 마진이 마이너스라 헤지로는 위험이 줄지 않아요. 환율이 올라 손해를 메울 기회까지 막혀 적자확률이 오히려 올라가요. 견적가를 먼저 올려야 해요.")
+    elif b["fx_breakeven"] is None:
+        lines.append("이만큼 헤지하면 환율이 절반으로 내려가도 적자가 나지 않아요. 남는 위험은 원가 초과예요.")
+    elif a["fx_breakeven"] is not None:
+        lines.append(f"버틸 수 있는 환율은 {a['fx_breakeven']:,.0f}원 → {b['fx_breakeven']:,.0f}원이 돼요.")
+    lines.append("대신 환율이 올라도 헤지한 만큼은 이익을 못 봐요. (헤지 비용은 0으로 가정)")
+    metrics = [{"label": "적자확률", "value": _p(b["loss_prob"])}, {"label": "예상 마진", "value": _p(b["margin_mean"], 1)}]
+    return lines, metrics
 
 
 def answer(be, bid_id: str, message: str, state: dict) -> dict:
@@ -442,6 +510,10 @@ def _answer(be, bid_id: str, message: str, prev: dict) -> dict:
     if parsed["assumed"]:
         notes.insert(0, f"숫자가 없어서 이렇게 가정했어요: {', '.join(dict.fromkeys(parsed['assumed']))}. 다른 폭이 궁금하면 숫자를 같이 말해 주세요.")
 
+    hedge_ratio = parsed["special"].pop("hedge", None)
+    if hedge_ratio is not None and not 0 < hedge_ratio <= 1:
+        notes.append("헤지 비율은 1% ~ 100% 사이로 말해 주세요.")
+        hedge_ratio = None
     updates = _resolve_special(be, bid_id, prev, parsed, notes)
     params = {**prev, **updates}
     removed = list(dict.fromkeys(parsed["removed"]))
@@ -452,6 +524,9 @@ def _answer(be, bid_id: str, message: str, prev: dict) -> dict:
             params["fx_krw"] = None
 
     if not updates and not removed_names:
+        if hedge_ratio is not None:                            # "대금 50%를 환헤지하면?" → 조건은 그대로, 헤지 결과만
+            lines, metrics = _hedge_lines(be, bid_id, prev, hedge_ratio)
+            return _reply(params, prev, lines, notes, metrics, todo="오른쪽 '환헤지 계산'에서 비율을 바꿔 가며 견적가 인상과 비교해 보세요.")
         if parsed["intent"] == "help":
             return _reply(params, prev, ["경쟁사 견적·후판가·환율·납기·우리 견적가가 바뀌면 결과가 어떻게 달라지는지 계산해 드려요. "
                                          "여러 조건을 한 문장에 섞어도 되고, 숫자 없이 물어보면 5%(납기는 3개월)로 가정해요. 이렇게 물어보세요."] + EXAMPLES
@@ -461,14 +536,16 @@ def _answer(be, bid_id: str, message: str, prev: dict) -> dict:
                                          "예: 경쟁사가 10% 싸게 들어오고 환율이 1,300원이면?", "예: 후판가가 20% 오르고 납기가 6개월 늦어지면?"], notes)
         if parsed["intent"] == "decide":
             lines, metrics, src = _summary_lines(be, bid_id, prev)
-            return _reply(params, prev, lines + [_verdict(be, bid_id, prev)], notes, metrics, source=src)
+            todo = verdict_parts(be.compare(bid_id, prev)["scenario"]["summary"])["todo"]
+            return _reply(params, prev, lines + [_verdict(be, bid_id, prev)], notes, metrics, source=src, todo=todo)
         if parsed["intent"] == "thanks":
             return _reply(params, prev, ["천만에요. 다른 조건도 궁금하면 물어보세요."], notes)
         if parsed["intent"] == "info" or removed:
             lines, metrics, src = _summary_lines(be, bid_id, prev)
             if removed:
                 lines.insert(0, "빼라고 한 조건은 지금 걸려 있지 않아요.")
-            return _reply(params, prev, lines, notes, metrics, source=src)
+            todo = verdict_parts(be.compare(bid_id, prev)["scenario"]["summary"])["todo"]
+            return _reply(params, prev, lines, notes, metrics, source=src, todo=todo)
         lines = [] if notes else ["조건을 읽지 못했어요. 이렇게 물어보세요."] + EXAMPLES
         return _reply(params, prev, lines, notes)
 
@@ -516,5 +593,9 @@ def _answer(be, bid_id: str, message: str, prev: dict) -> dict:
     elif s["recommended"] is not None and b["recommended"] is not None and abs(s["recommended"] - b["recommended"]) >= 0.05:
         lines.append(f"권장 견적가는 {_m(b['recommended'])} → {_m(s['recommended'])}로 바뀌어요.")
     if s["quote_now"] < s["bep"]:
-        lines.append(f"주의: 이 조건에서 제안가 {_m(s['quote_now'])}는 손익분기 선가 {_m(s['bep'])}보다 낮아요. 따내면 손해예요.")
-    return _reply(params, prev, lines, notes, _metrics(s), understood, changed=True, source=cmp_["source"])
+        lines.append(f"주의: 이 조건에서 견적가 {_m(s['quote_now'])}는 손익분기 선가 {_m(s['bep'])}보다 낮아요. 따내면 손해예요.")
+    metrics = _metrics(s)
+    if hedge_ratio is not None:
+        hl, metrics = _hedge_lines(be, bid_id, params, hedge_ratio)
+        lines += hl
+    return _reply(params, prev, lines, notes, metrics, understood, changed=True, source=cmp_["source"], todo=verdict_parts(s)["todo"])

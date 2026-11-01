@@ -64,7 +64,18 @@
 응답: `params`(누적된 조건), `active`/`understood`(칩 문구), `lines`(답변 문장), `metrics`(낙찰확률·예상 마진·적자확률), `notes`(지원하지 않는 질문 안내), `changed`
 - 새 문장에 나온 조건만 덮어쓰고 나머지는 유지한다. "초기화"라고 하면 모두 기준으로 돌아간다.
 - 알아듣는 조건: 경쟁사 견적(%) · 후판가(%) · 환율(% 또는 원) · 납기 지연(개월) · 우리 견적가(%)
-- 환헤지·납기 단축·선주/사양 질문은 계산하지 않고 `notes` 로 이유를 알린다.
+- 납기 단축·선주/사양 질문은 계산하지 않고 `notes` 로 이유를 알린다.
+- "대금 50%를 환헤지하면?"처럼 헤지 비율을 말하면 조건은 그대로 두고 헤지 결과를 답한다.
+- 응답에 `todo`(답 끝 "이렇게 해 보세요" 한 줄) 추가.
+
+### POST /api/scenario/advice  (MVP2 · 결론 박스)
+요청은 `/api/scenario/compare` 와 같다. 응답: `verdict`(`level`: stop·up·down·go, `head` 결론 한 줄, `text`, `todo`),
+`fx_breakeven`(버틸 수 있는 환율), `fx_assumed`, `fx_gap`, `watch`(시나리오 표에서 기대가치가 가장 많이 줄어드는 조건 2개, 묶음별 1개씩 + 대응 `todo`).
+판단 기준은 `backend/chat.py` 의 `verdict_parts()` (견적가 < 손익분기 → 손해, 아니면 권장 구간 아래·위·안).
+
+### POST /api/scenario/hedge  (MVP2 · 환헤지 계산)
+요청: `{ "bid_id", "scenario": {...}, "ratio": 0.5 }`. 응답: `none`(헤지 없음)·`hedged`(헤지 적용) 각각 `loss_prob, margin_mean, margin_p10, margin_p90, fx_breakeven`.
+받을 달러의 ratio 만큼을 지금 조건의 환율로 고정한다고 보고, 헤지 비용은 0으로 가정한다. 계산은 `backend/margin_path.py`.
 
 ### 시나리오 조건에 `quote_pct` 추가
 `/api/scenario/compare` 의 `scenario` 와 `/api/bids/{id}/curve` 에 `quote_pct`(-0.3~0.3). 곡선은 그대로 두고 제안가 위치만 옮겨 그 견적가의 낙찰확률·기대가치를 읽는다.
@@ -133,3 +144,37 @@
 응답: 입력 필드 + `id`, `sample`, `sc: { fin, rep, trust, total }`, `label`(양호/보통/주의)
 - 점수 = 재무 40 + 업계 평판 30 + 거래 신뢰 30
 - 오류: 없는 id 404, 범위 밖 값 422
+
+---
+## v0.4 추가 (견적 리스크 2차 수정)
+
+### GET /api/bids 응답에 선종·규모
+`ship_type`("컨테이너선"), `size_teu`, `num_ships` 추가. 입찰 정보 줄에 "컨테이너선 15,500TEU · 2척"으로 보인다.
+
+### POST /api/bids/{id}/risk  (MVP1 · 원가 통화·대금 분할·환헤지 반영)
+계산은 `backend/quote_risk.py`. 낙찰확률·기대가치·권장가는 `/curve` 와 같고, 환율·원가 위험만 아래 가정으로 다시 계산한다.
+
+요청(전부 선택, 비우면 선종·규모별 기본값):
+```json
+{ "costs": [{ "key": "equip", "share": 0.5, "usd_share": 0.6 }, ...],
+  "milestones": [{ "key": "contract", "at": 0, "weight": 0.2 }, ...],
+  "hedge": 0.3, "loss_target": 0.10 }
+```
+- `costs`: 원가 항목(후판·강재/인건비/엔진·기자재/기타)의 비중과 그중 달러로 사는 비중. 환율 위험은 원화 원가에만 걸린다.
+- `milestones`: 대금 분할(기본 계약·착공·진수·인도 20/20/20/40). `at` 은 납기 대비 시점(0~1). 받는 시점 환율로 환산한다.
+- `hedge`: 받을 달러 중 입찰 시점 환율로 고정하는 비율 (선물환 비용 0 가정).
+- `loss_target`: 안전 시작 견적가·판단 도구의 적자확률 기준.
+- 비중 합계가 100%가 아니면 비율대로 나누고 `notes` 로 알린다.
+
+응답: `assumptions`(적용된 값), `summary`(적자확률·예상 마진·`fx_breakeven`·`krw_cost_share`·`safe_quote` 등), `grid`(견적가별 적자확률·마진 범위),
+`money`(억 원: 척당/전체 척 이익, 실행원가와 항목별 금액, 안전 시작 견적가), `simple`(예전 가정의 적자확률·손익분기 환율),
+`decision`(`raise`: 견적가를 올려 기준을 맞출 때 / `hedge`: 헤지로 맞출 때 필요한 비율), `backtest`(2010년 이후 납기 길이 구간에서 실제 환율이 시뮬레이션 10~90% 범위에 든 비율).
+가정을 (원화 100%, 인도 100%, 헤지 0)으로 두면 예전 MarginModel 결과(`simple`)와 정확히 같다.
+요청에 `quote`($M)를 주면 그 견적가로 모든 값을 다시 계산한다 (화면 슬라이더). 응답에 `verdict`(환율 위험 결론: `level`·`head`·`text`·`todo`),
+`steps`(예전 계산 → 달러 원가 반영 → 대금 분할 반영 → 헤지 반영 단계별 적자확률), `backtest.series`(구간별 실제 환율 변화)도 준다.
+
+### 환율·원가 위험 계산 통일 (v0.4)
+`/curve`·`/scenario/compare`·`scenario-table`·`/chat`·`/scenario/margin-path`·`/scenario/hedge` 의 적자확률·예상 마진·`fx_breakeven` 도
+견적리스크와 같은 기본 가정(원가 통화 구분·대금 분할, 헤지 0)으로 계산한다 (`quote_risk.apply_defaults`). 두 화면의 숫자가 같다.
+`summary` 에 예전 가정 값 `loss_prob_simple`·`fx_breakeven_simple`, 원화 원가 비중 `krw_cost_share` 를 함께 준다.
+`fx_breakeven` 이 `null` 이면 환율이 입찰 시점의 절반 아래로 내려가도 적자가 나지 않는다는 뜻이다.
