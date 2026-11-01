@@ -136,10 +136,17 @@ class Backend:
             r = self.raw.loc[bid_id]
             ratio = float(r.quote / r.market_price)
             lo, hi = min(0.85, ratio - 0.03), max(1.15, ratio + 0.03)
-            payload = self._payload(bid_id, sc, self.eng.evaluate(bid_id, sc, lo=lo, hi=hi))
+            from .quote_risk import apply_defaults, fx_cost_factor   # 원가 통화·대금 분할 기본 가정 (순환 import 를 피해 여기서 부른다)
+            # 환율을 바꿔 보는 조건: 엔진은 원가 '전부'에 환율 변화를 곱하므로, 달러로 사는 원가는 빼고 원화 원가에만
+            # 곱하도록 같은 효과의 환율(fx_eff)을 대신 넘긴다. (modeling/ 은 그대로 둔다. 화면에 보이는 환율은 sc 의 값)
+            fx0 = float(r.expected_fx)
+            fx_s = sc.fx_krw or fx0 * (1 + sc.fx_pct)
+            sc_eng = sc
+            if abs(fx_s - fx0) > 1e-9:
+                sc_eng = Scenario(**{**sc.__dict__, "fx_pct": 0.0, "fx_krw": fx0 / fx_cost_factor(bid_id, fx0 / fx_s)})
+            payload = self._payload(bid_id, sc, self.eng.evaluate(bid_id, sc_eng, lo=lo, hi=hi))
             if quote_pct:
                 payload = self._move_quote(payload, quote_pct)
-            from .quote_risk import apply_defaults       # 원가 통화·대금 분할 기본 가정 (순환 import 를 피해 여기서 부른다)
             self._cache[key] = apply_defaults(self, bid_id, payload)
         return self._cache[key]
 

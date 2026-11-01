@@ -251,3 +251,55 @@ table.data tr.total td { font-weight: 700; border-top: 1px solid var(--line); }
   .topbar { padding: 0 14px; overflow-x: auto; } .brand { margin-right: 18px; } .page { padding: 16px 14px 40px; }
 }
 .okfacts { margin: 0; padding-left: 18px; font-size: 13px; color: var(--ink-2); display: grid; gap: 4px; }
+
+/* ===== 반사실 화면 v2: 판단 박스 · 주의할 것 · 근거 보기 (styles.css 맨 아래에 붙여 넣기) ===== */
+.verdict-box .vb-title { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.verdict-box .vb-title h2 { margin: 0; font-size: 22px; font-weight: 700; }
+.vb-pill { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: #e3f1e9; color: #2c6b4a; }
+.verdict-box.low .vb-pill, .verdict-box.loss .vb-pill, .verdict-box.bad .vb-pill { background: #fbe4e4; color: #a83232; }
+.verdict-box.high .vb-pill, .verdict-box.warn .vb-pill { background: #fbefdc; color: #9a5b0c; }
+.verdict-box .vb-text { font-size: 17px; line-height: 1.55; margin: 6px 0 14px; }
+.vb-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
+.vb-stat { background: #f4f6f9; border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.vb-stat .k { font-size: 12px; color: #5b6676; }
+.vb-stat b { font-size: 26px; font-weight: 700; line-height: 1.2; }
+.vb-stat .was { font-size: 11px; color: #8a94a3; }
+.vb-stat.fx { background: #fbeee3; }
+.vb-stat.fx .k, .vb-stat.fx .sub { color: #b5531a; }
+.vb-stat.fx b { color: #b5531a; }
+.vb-stat .sub { font-size: 11px; }
+
+.risk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0 18px; }
+.risk-card { border-radius: 10px; padding: 14px 16px; border: 1px solid; display: flex; flex-direction: column; gap: 6px; }
+.risk-card.r1 { background: #fdf1f1; border-color: #f0c9c9; }
+.risk-card.r2 { background: #fbf5ee; border-color: #efd9bf; }
+.risk-tag { font-size: 12px; font-weight: 600; color: #b03a3a; }
+.risk-card.r2 .risk-tag { color: #a5600f; }
+.risk-title { font-size: 18px; font-weight: 700; }
+.risk-line { margin: 0; font-size: 14px; color: #444d5b; }
+.risk-todo { margin: 6px 0 0; padding-top: 8px; border-top: 1px dashed rgba(0, 0, 0, .15); font-size: 14px; line-height: 1.5; }
+.risk-apply { align-self: flex-start; margin-top: 4px; font-size: 12px; background: none; border: 0; padding: 0; color: #2f5fa8; cursor: pointer; text-decoration: underline; }
+
+.evbars h3 { font-size: 15px; font-weight: 500; color: #4a5565; margin: 0 0 10px; }
+.evbars .unit { font-size: 12px; color: #8a94a3; margin-left: 4px; }
+.evbar { display: grid; grid-template-columns: 130px 1fr 52px; align-items: center; gap: 10px; margin: 7px 0; font-size: 13px; }
+.evbar .track { height: 10px; background: #eef1f5; border-radius: 999px; overflow: hidden; display: block; }
+.evbar .fill { display: block; height: 100%; border-radius: 999px; background: #8f98a8; }
+.evbar .fill.f0 { background: #c0392b; }
+.evbar .fill.f1 { background: #e07b39; }
+.evbar .val { text-align: right; font-variant-numeric: tabular-nums; }
+.evbar-note { margin: 10px 0 0; font-size: 15px; color: #444d5b; }
+
+.fold { border: 1px solid #e3e8ef; border-radius: 8px; margin-top: 8px; background: #fff; }
+.fold > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; font-size: 14px; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary em { font-style: normal; color: #6b7686; margin-left: 6px; font-size: 13px; }
+.fold > summary i { font-style: normal; font-size: 12px; color: #6b7686; white-space: nowrap; }
+.fold-body { padding: 4px 14px 14px; }
+.assume-list { margin: 4px 0 0; padding-left: 18px; line-height: 1.7; font-size: 14px; }
+
+@media (max-width: 900px) {
+  .vb-stats { grid-template-columns: 1fr 1fr; }
+  .risk-grid { grid-template-columns: 1fr; }
+  .evbar { grid-template-columns: 100px 1fr 46px; }
+}

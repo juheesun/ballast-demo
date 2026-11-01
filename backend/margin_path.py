@@ -18,20 +18,20 @@ import json
 from typing import Optional
 import numpy as np
 
-from .quote_risk import USD_COST_AT, breakeven_fx, defaults, factors, sim_paths
+from .quote_risk import USD_COST_AT, breakeven_fx, defaults, factors, fx_basis, sim_paths
 
 MILESTONES = [(0.0, "계약"), (0.25, "강재절단"), (0.5, "탑재"), (0.75, "진수"), (1.0, "인도")]
 _result_cache: dict = {}
 
 
-def _series(mm, quote: float, bep: float, months: int, a: dict) -> list:
+def _series(mm, quote: float, bep: float, months: int, a: dict, g0: float = 1.0) -> list:
     months = max(int(months), 1)
     g, ov = sim_paths(mm, months)
     t = np.arange(months + 1)
     usd = sum(c["share"] * c["usd_share"] for c in a["costs"])
     upto = lambda at: g[:, np.minimum(int(round(at * months)), t)]                         # (n, months+1)
-    R = sum(m["weight"] * upto(m["at"]) for m in a["milestones"])
-    C = (1.0 + ov[:, None] * (t / months)[None, :]) * ((1.0 - usd) + usd * upto(USD_COST_AT))
+    R = g0 * sum(m["weight"] * upto(m["at"]) for m in a["milestones"])                     # g0 = 반사실 환율 출발점 (quote_risk.fx_basis)
+    C = (1.0 + ov[:, None] * (t / months)[None, :]) * ((1.0 - usd) + usd * g0 * upto(USD_COST_AT))
     margin = 1.0 - C * bep / (quote * R)
     p10, p50, p90 = np.percentile(margin, [10, 50, 90], axis=0)
     mean, loss = margin.mean(axis=0), (margin < 0).mean(axis=0)
@@ -42,9 +42,9 @@ def _series(mm, quote: float, bep: float, months: int, a: dict) -> list:
 
 def _one(be, bid_id: str, params: Optional[dict]) -> dict:
     s = be.curve(bid_id, params)["summary"]
-    months = int(round(s["months"]))
-    return {"quote": s["quote_now"], "bep": s["bep"], "months": months,
-            "points": _series(be.mm, s["quote_now"], s["bep"], months, defaults(bid_id))}
+    months, a = int(round(s["months"])), defaults(bid_id)
+    bep, g0, _ = fx_basis(be, bid_id, s, a)
+    return {"quote": s["quote_now"], "bep": s["bep"], "months": months, "points": _series(be.mm, s["quote_now"], bep, months, a, g0)}
 
 
 def margin_path(be, bid_id: str, params: Optional[dict] = None) -> dict:
@@ -64,15 +64,16 @@ def hedge(be, bid_id: str, params: Optional[dict] = None, ratio: float = 0.0) ->
     계산은 견적리스크와 같은 quote_risk.factors (헤지 비용 = 선물환 포인트는 0으로 가정). 헤지 0% 이면 카드 값과 같다.
     버틸 수 있는 환율이 None 이면 환율이 아무리 내려도 적자가 나지 않는다는 뜻 (헤지·달러 원가로 다 막힘)."""
     s = be.curve(bid_id, params)["summary"]
-    months, q, bep, fx = int(round(s["months"])), s["quote_now"], s["bep"], s["fx_assumed"]
+    months, q, fx = int(round(s["months"])), s["quote_now"], s["fx_assumed"]
     a = defaults(bid_id)
+    bep, g0, fx_bid = fx_basis(be, bid_id, s, a)
     g, ov = sim_paths(be.mm, months)
     r = lambda v: round(float(v), 4)
 
     def one(h: float) -> dict:
-        C, R, usd = factors(g, ov, months, a, h)
+        C, R, usd = factors(g, ov, months, a, h, g0)
         m = 1.0 - bep * C / (q * R)
-        fb = breakeven_fx(q, bep, usd, a, h, fx)
+        fb = breakeven_fx(q, bep, usd, a, h, fx_bid, g0)
         return {"ratio": r(h), "loss_prob": r((m < 0).mean()), "margin_mean": r(m.mean()),
                 "margin_p10": r(np.percentile(m, 10)), "margin_p90": r(np.percentile(m, 90)),
                 "fx_breakeven": None if fb is None else round(fb, 1)}

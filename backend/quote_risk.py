@@ -100,16 +100,29 @@ def sim_paths(mm, months: int):
     return _sim_cache[key]
 
 
-def factors(g, ov, months: int, a: dict, hedge: float):
-    """시뮬레이션마다의 원가 배수 C 와 매출 배수 R (둘 다 '입찰 시점 환율·원가초과 0' 이면 1)."""
-    usd = sum(c["share"] * c["usd_share"] for c in a["costs"])
+def usd_share(a: dict) -> float:
+    return sum(c["share"] * c["usd_share"] for c in a["costs"])
+
+
+def fx_cost_factor(bid_id: str, fx_ratio: float) -> float:
+    """입찰 환율이 fx_ratio(= 입찰환율 ÷ 바뀐 환율) 배로 바뀔 때 달러 기준 원가가 몇 배가 되나.
+    달러로 사는 원가는 그대로, 원화 원가만 fx_ratio 배 (환율이 내리면 원화 원가가 달러로는 비싸진다)."""
+    u = usd_share(defaults(bid_id))
+    return u + (1.0 - u) * fx_ratio
+
+
+def factors(g, ov, months: int, a: dict, hedge: float, g0: float = 1.0):
+    """시뮬레이션마다의 원가 배수 C 와 매출 배수 R (둘 다 '입찰 시점 환율·원가초과 0' 이면 1).
+    g0 = 반사실로 환율을 바꿔 본 경우 (바뀐 환율 ÷ 입찰 환율). 이 수준에서 출발해 g 만큼 더 움직이고,
+    헤지·계약금은 바뀐 환율로 고정된다. 원화 원가는 환율과 무관하게 그대로다."""
+    usd = usd_share(a)
     g_pay = g[:, int(round(USD_COST_AT * months))]
-    C = (1.0 + ov) * ((1.0 - usd) + usd * g_pay)
-    R = sum(m["weight"] * (hedge + (1.0 - hedge) * g[:, int(round(m["at"] * months))]) for m in a["milestones"])
+    C = (1.0 + ov) * ((1.0 - usd) + usd * g0 * g_pay)
+    R = g0 * sum(m["weight"] * (hedge + (1.0 - hedge) * g[:, int(round(m["at"] * months))]) for m in a["milestones"])
     return C, R, usd
 
 
-def breakeven_fx(q: float, bep: float, usd: float, a: dict, hedge: float, fx0: float) -> Optional[float]:
+def breakeven_fx(q: float, bep: float, usd: float, a: dict, hedge: float, fx0: float, g0: float = 1.0) -> Optional[float]:
     """환율이 입찰 직후 F 로 옮겨 가 계속 머문다면, 마진이 0 이 되는 F. (계약금은 이미 입찰 환율로 받는다)
     w0 + (1−w0)(h + (1−h)x) = (BEP/q)·((1−u) + u·x)  →  x = F / 입찰환율
     환율이 절반 넘게 내려가야 적자인 경우(헤지·달러 원가로 거의 다 막힘)는 None."""
@@ -118,7 +131,7 @@ def breakeven_fx(q: float, bep: float, usd: float, a: dict, hedge: float, fx0: f
     slope = (1 - w0) * (1 - hedge) - k * usd
     if slope <= 1e-9:
         return None                              # 환율이 아무리 내려도 적자가 나지 않음 (헤지·달러 원가로 다 막힘)
-    x = (k * (1 - usd) - w0 - (1 - w0) * hedge) / slope
+    x = (k * (1 - usd) - g0 * (w0 + (1 - w0) * hedge)) / slope     # g0 = 1 이면 위 식 그대로 (계약금·헤지는 g0 수준에 고정)
     return None if x <= FX_FLOOR else x * fx0
 
 
@@ -137,18 +150,31 @@ def _backtest(mm, months: int) -> dict:
             "below": _r((actual < lo).mean()), "above": _r((actual > hi).mean()), "target": 0.8}
 
 
+def fx_basis(be, bid_id: str, s: dict, a: dict) -> tuple:
+    """반사실 환율 조건을 시뮬레이션 출발점으로 바꾼다 → (환율 효과를 뺀 BEP, g0 = 바뀐 환율 ÷ 입찰 환율, 입찰 환율).
+    엔진 BEP 에는 '원화 원가만' 환율 효과가 들어 있으므로(Backend.curve) 그만큼 되돌린다. 후판 변화는 그대로 남는다.
+    apply_defaults·margin_path 가 같이 써서 카드·마진 경로·환헤지 값이 서로 같게 나온다."""
+    fx_bid = float(be.raw.loc[bid_id].expected_fx)
+    g0 = float(s["fx_assumed"]) / fx_bid
+    u = usd_share(a)
+    return float(s["bep"]) / (u + (1.0 - u) / g0), g0, fx_bid
+
+
 def apply_defaults(be, bid_id: str, payload: dict) -> dict:
     """엔진 곡선 응답의 환율·원가 위험 값(적자확률·마진·버틸 수 있는 환율)을 기본 가정으로 다시 계산한다.
-    반사실 화면·챗봇도 견적리스크 화면과 같은 적자확률을 쓰게 하려는 것. 예전 가정 값은 *_simple 로 남긴다."""
+    반사실 화면·챗봇도 견적리스크 화면과 같은 적자확률을 쓰게 하려는 것. 예전 가정 값은 *_simple 로 남긴다.
+    환율을 바꿔 본 경우: 엔진의 BEP 에는 이미 '달러 원가는 그대로, 원화 원가만' 환율 효과가 들어 있다(Backend.curve 참고).
+    그래서 여기서는 그 효과를 뺀 BEP(bep_base)로 시뮬레이션을 다시 돌리되 g0 로 같은 출발점을 준다."""
     a, _ = _merge(bid_id, None)
     s, grid = payload["summary"], payload["grid"]
-    months, bep, fx = int(round(s["months"])), float(s["bep"]), float(s["fx_assumed"])
+    months = int(round(s["months"]))
+    bep, g0, fx_bid = fx_basis(be, bid_id, s, a)                          # 환율 효과를 뺀 BEP (후판 변화는 그대로 남음)
     g, ov = sim_paths(be.mm, months)
-    C, R, usd = factors(g, ov, months, a, a["hedge"])
+    C, R, usd = factors(g, ov, months, a, a["hedge"], g0)
     quotes = np.array([r["quote"] for r in grid])
     margin = 1.0 - (bep * C)[None, :] / (quotes[:, None] * R[None, :])
     p10, p50, p90 = np.percentile(margin, [10, 50, 90], axis=1)
-    profit = (quotes[:, None] * R[None, :] - bep * C[None, :]).mean(axis=1)
+    profit = (quotes[:, None] * R[None, :] - bep * C[None, :]).mean(axis=1) / g0     # 바뀐 환율 기준 달러
     for i, r in enumerate(grid):
         r.update(loss_prob=_r((margin[i] < 0).mean()), margin_mean=_r(margin[i].mean()), margin_p10=_r(p10[i]),
                  margin_p50=_r(p50[i]), margin_p90=_r(p90[i]), ev_risk=_r(r["p"] * profit[i], 3))
@@ -156,7 +182,7 @@ def apply_defaults(be, bid_id: str, payload: dict) -> dict:
     m = 1.0 - bep * C / (q * R)
     s.update(loss_prob_simple=s["loss_prob_now"], fx_breakeven_simple=s["fx_breakeven"],
              loss_prob_now=_r((m < 0).mean()), margin_mean_now=_r(m.mean()),
-             fx_breakeven=_r(breakeven_fx(q, bep, usd, a, a["hedge"], fx), 1), krw_cost_share=_r(1 - usd))
+             fx_breakeven=_r(breakeven_fx(q, bep, usd, a, a["hedge"], fx_bid, g0), 1), krw_cost_share=_r(1 - usd))
     return payload
 
 
