@@ -9,7 +9,7 @@ import Figure from '../components/Figure.jsx'
 import Conclusions from '../components/Conclusions.jsx'
 import Assume from '../components/Assume.jsx'
 import { Info, Legend } from '../components/Info.jsx'
-import { EvChart, MarginBandChart, LossChart, COLORS as C } from '../components/charts.jsx'
+import { EvChart, MarginBandChart, LossChart, BacktestChart, COLORS as C } from '../components/charts.jsx'
 
 // 화면 그래프 요소별 설명 (ⓘ). 문구는 여기서만 고친다.
 const LEGEND = {
@@ -21,7 +21,7 @@ const LEGEND = {
     { kind: 'vline', color: C.INK, label: '견적가', why: '지금 내려는 견적가의 위치입니다.' },
   ],
   margin: [
-    { kind: 'band', color: C.ACCENT, label: '10~90% 범위', why: '환율·원가가 흔히 움직이는 폭에서 마진이 어디까지 흔들리는지 보여 줍니다. 아래 과거 검증으로 폭이 맞는지 확인합니다.' },
+    { kind: 'band', color: C.ACCENT, label: '10~90% 범위', why: '환율·원가가 흔히 움직이는 폭에서 마진이 어디까지 흔들리는지 보여 줍니다. 폭이 맞는지는 위 과거 검증에서 확인합니다.' },
     { kind: 'line', color: C.ACCENT, label: '중앙값', why: '시뮬레이션의 절반은 이보다 높고 절반은 낮습니다.' },
     { kind: 'hatch', color: C.LOSS, label: '0% 아래', why: '마진이 0% 아래면 적자입니다. 띠가 여기에 많이 걸칠수록 위험합니다.' },
     { kind: 'vline', color: C.INK, label: '견적가', why: '지금 견적가에서의 마진 범위를 읽는 기준선입니다.' },
@@ -32,6 +32,31 @@ const LEGEND = {
     { kind: 'dash', color: C.ACCENT, label: '안전 시작 견적가', why: '적자확률이 안전 기준 이하가 되는 가장 낮은 견적가입니다. 견적을 이보다 낮게 시작하지 마세요.' },
     { kind: 'vline', color: C.INK, label: '견적가', why: '지금 견적가의 적자확률입니다.' },
   ],
+  backtest: [
+    { kind: 'line', color: C.LINE, label: '실제 환율 변화', why: '그 달에 입찰했다면 납기 동안 환율이 실제로 얼마나 움직였는지입니다.' },
+    { kind: 'band', color: C.ACCENT, label: '시뮬레이션 10~90% 범위', why: '이 화면이 "흔히 일어나는 폭"으로 쓰는 범위입니다. 실제 선이 이 안에 80% 정도 들어오면 폭이 맞다는 뜻입니다.' },
+    { kind: 'dot', color: C.INK, label: '범위 밖', why: '시뮬레이션이 예상한 폭을 벗어난 구간입니다. 위로 벗어나면 환율이 예상보다 많이 오른 경우(우리에겐 이익)입니다.' },
+  ],
+}
+
+// 적자확률이 왜 이 값인지: 예전 계산에서 가정을 하나씩 더할 때의 변화 (막대 = 적자확률)
+function StepBars({ steps }) {
+  const max = Math.max(...steps.map((x) => x.loss_prob), 0.01)
+  return (
+    <div className="steps">
+      {steps.map((x, i) => {
+        const last = i === steps.length - 1
+        const d = i > 0 ? x.loss_prob - steps[i - 1].loss_prob : null
+        return (
+          <div className={`step ${last ? 'last' : ''}`} key={x.key}>
+            <div className="step-k"><b>{x.label}</b><span>{x.detail}</span></div>
+            <div className="step-bar"><i style={{ width: `${Math.max((x.loss_prob / max) * 100, 1.5)}%` }} /></div>
+            <div className="step-v"><b>{pct(x.loss_prob, 0)}</b>{d != null && Math.abs(d) >= 0.005 && <span className={d < 0 ? 'pos' : 'neg'}>{signed(d * 100, 0, '%p')}</span>}</div>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 // 원가 구성 · 대금 분할 · 헤지 · 안전 기준. 값은 모두 가정이고 그 자리에서 고친다.
@@ -171,8 +196,17 @@ export default function HomePage() {
       {shown && (() => {
         const s = shown.summary, m = shown.money, bt = shown.backtest
         const a = assume || shown.assumptions
+        const v = shown.verdict, st = shown.steps
+        const first = st[0], final = st[st.length - 1]
+        const biggest = st.slice(1).reduce((b, x, i) => (Math.abs(x.loss_prob - st[i].loss_prob) > Math.abs(b.d) ? { x, d: x.loss_prob - st[i].loss_prob } : b), { x: null, d: 0 })
         return (
           <>
+            <section className={`card verdict-box ${v.level}`}>
+              <div className="vb-head">{v.head}</div>
+              <p>{v.text} 적자확률은 <b>{pct(s.loss_prob_now, 0)}</b>, 낙찰확률은 <b>{pct(s.p_now, 0)}</b>예요.</p>
+              <p className="todo"><b>이렇게 해 보세요</b>{v.todo}</p>
+              <p className="vb-note">판단 기준: 견적가가 손익분기 선가 아래면 손해, 아니면 권장 구간(기대가치가 최고점의 85% 이상) 아래·위·안. 반사실 화면과 같은 기준이며, 최종 결정은 담당자가 합니다.</p>
+            </section>
             <StatStrip items={[
               { k: '견적가 기준 낙찰확률', v: pct(s.p_now, 0), meter: s.p_now, s: '이 견적가로 낙찰될 확률' },
               { k: '기대가치 (척당)', v: `${s.ev_now.toFixed(1)} $M`, s: '낙찰확률 × (견적가 − 손익분기)' },
@@ -194,7 +228,29 @@ export default function HomePage() {
               <DecisionCard data={shown} onHedge={(h) => setAssume({ ...a, hedge: h })} />
             </div>
 
-            <Figure title="견적가별 기대가치" unit="$M / 척 · 가로축: 시장 기준가 대비 견적"
+            <div className="two">
+              <Figure title={`적자확률 ${pct(final.loss_prob, 0)}의 근거`} unit="가정을 하나씩 더할 때"
+                info="예전 계산(원가 전부 원화, 대금은 인도 때 한 번에)에서 시작해, 실제 조선업 조건을 하나씩 반영하면 적자확률이 어떻게 바뀌는지 보여 줍니다.">
+                <StepBars steps={st} />
+                <p className="note-line">
+                  {Math.abs(final.loss_prob - first.loss_prob) < 0.005
+                    ? '가정을 반영해도 적자확률은 거의 그대로예요.'
+                    : <>예전 계산 {pct(first.loss_prob, 0)} → 지금 {pct(final.loss_prob, 0)}. 가장 크게 바꾼 건 <b>{biggest.x?.label}</b>({signed(biggest.d * 100, 0, '%p')})이에요.</>}
+                  {final.loss_prob > first.loss_prob + 0.005 && ' 예상 마진이 마이너스라, 환율이 올라 손해를 메울 기회가 줄어서 오히려 올라가요.'}
+                </p>
+              </Figure>
+              {bt.n > 0 && (
+                <Figure title="과거 검증: 시뮬레이션 범위가 맞나" unit={`${bt.from.slice(0, 4)}년 이후 ${bt.months}개월 구간 ${bt.n}개`}
+                  info={`${bt.from}~${bt.to} 월별 환율로, 그 달에 입찰했다면 납기(${bt.months}개월) 동안 환율이 실제로 얼마나 움직였는지 한 달씩 밀며 확인했습니다. 구간이 서로 겹치고 시뮬레이션도 같은 기간 환율로 만들었으므로 참고용입니다.`}>
+                  <BacktestChart bt={bt} />
+                  <Legend items={LEGEND.backtest} />
+                  <p className="note-line">실제 환율의 <b>{pct(bt.inside, 0)}</b>가 범위 안 (목표 80%) · 범위보다 오른 경우 {pct(bt.above, 0)}, 내린 경우 {pct(bt.below, 0)}
+                    {bt.inside >= 0.8 ? ' → 범위가 과거 변동을 충분히 담아요.' : ' → 범위가 과거 변동보다 좁아요. 적자확률을 낮게 볼 수 있어요.'}</p>
+                </Figure>
+              )}
+            </div>
+
+            <Figure title="견적가별 기대가치" unit="척당 $M"
               info="얼마에 내야 평균적으로 가장 많이 남는지 봅니다. 너무 높으면 못 따고, 너무 낮으면 따도 남는 게 없습니다.">
               <EvChart data={shown} />
               <Legend items={LEGEND.ev} />
@@ -204,12 +260,6 @@ export default function HomePage() {
               <Figure title="인도 시점 마진 범위" unit="%" info="같은 견적가라도 환율·원가에 따라 마진이 흔들립니다. 얼마나 흔들리는지 봐야 견적의 여유를 정할 수 있습니다.">
                 <MarginBandChart data={shown} />
                 <Legend items={LEGEND.margin} />
-                {bt.n > 0 && (
-                  <p className="hl">
-                    과거 검증: {bt.from.slice(0, 4)}년 이후 {bt.months}개월 구간 {bt.n}개 중 실제 환율의 <b>{pct(bt.inside, 0)}</b>가 시뮬레이션 10~90% 범위 안 (목표 80%)
-                    <Info text={`${bt.from}~${bt.to} 월별 환율로 납기 길이(${bt.months}개월) 구간을 한 달씩 밀며 확인했습니다. 범위보다 오른 경우 ${pct(bt.above, 0)}, 내린 경우 ${pct(bt.below, 0)}. 구간이 서로 겹치고 시뮬레이션도 같은 기간 환율로 만들었으므로 참고용입니다.`} />
-                  </p>
-                )}
               </Figure>
               <Figure title="견적가별 적자확률" unit="%" info="견적을 얼마 이상 불러야 환율이 나빠져도 버틸 수 있는지 봅니다.">
                 <LossChart data={shown} target={a.loss_target} safe={s.safe_quote} />

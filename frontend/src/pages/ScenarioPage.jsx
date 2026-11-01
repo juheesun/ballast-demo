@@ -233,7 +233,7 @@ export default function ScenarioPage() {
                   {bars.map((x, i) => (
                     <div className="evbar" key={x.id}>
                       <span className="nm">{BAR_LABEL[x.id]}</span>
-                      <span className="track"><span className={`fill f${Math.min(i, 2)}`} style={{ width: `${Math.max((x.d / barMax) * 100, 2)}%` }} /></span>
+                      <span className="track"><span className={`fill ${x.d >= 0.5 * bars[0].d ? 'hot' : ''}`} style={{ width: `${Math.max((x.d / barMax) * 100, 2)}%` }} /></span>
                       <span className="val">−{x.d.toFixed(1)}</span>
                     </div>
                   ))}

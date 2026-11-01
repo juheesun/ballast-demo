@@ -145,7 +145,9 @@ def _backtest(mm, months: int) -> dict:
     if len(s) <= months:
         return {"n": 0, "months": months}
     actual = s[months:] / s[:-months]
-    return {"months": months, "n": int(len(actual)), "from": fx[0]["year_month"], "to": fx[-1]["year_month"],
+    # 그래프용: 구간 시작 월별 실제 환율 변화 (1.05 = 납기 동안 5% 오름)
+    series = [{"start": fx[i]["year_month"], "end": fx[i + months]["year_month"], "ratio": _r(v)} for i, v in enumerate(actual)]
+    return {"months": months, "n": int(len(actual)), "from": fx[0]["year_month"], "to": fx[-1]["year_month"], "series": series,
             "lo": _r(lo), "hi": _r(hi), "inside": _r(((actual >= lo) & (actual <= hi)).mean()),
             "below": _r((actual < lo).mean()), "above": _r((actual > hi).mean()), "target": 0.8}
 
@@ -236,6 +238,20 @@ def evaluate(be, bid_id: str, assumptions: Optional[dict] = None) -> dict:
                 break
     # 비교용: 예전 가정(원가 전부 원화 · 인도 때 일시 수령 · 헤지 없음)
     simple = {"loss_prob": s0["loss_prob_simple"], "fx_breakeven": s0["fx_breakeven_simple"]}
+    # 적자확률 근거: 예전 가정에서 시작해 가정을 하나씩 더할 때 적자확률이 어떻게 바뀌나 (화면의 단계 막대)
+    lump = [{"key": "delivery", "label": "인도", "at": 1.0, "weight": 1.0}]
+    def loss_with(costs, milestones, h):
+        Cx, Rx, _ = factors(g, ov, months, {**a, "costs": costs, "milestones": milestones}, h)
+        return _r(((1.0 - bep * Cx / (q_now * Rx)) < 0).mean())
+    krw_only = [{**c, "usd_share": 0.0} for c in a["costs"]]
+    steps = [{"key": "simple", "label": "예전 계산", "detail": "원가 전부 원화 · 인도 때 한 번에 받음", "loss_prob": loss_with(krw_only, lump, 0.0)},
+             {"key": "usd", "label": "달러 원가 반영", "detail": f"원가 중 {(usd) * 100:.0f}%는 달러로 삼 → 환율이 내리면 같이 싸짐",
+              "loss_prob": loss_with(a["costs"], lump, 0.0)},
+             {"key": "milestones", "label": "대금 분할 반영",
+              "detail": " · ".join(f"{m['label']} {m['weight'] * 100:.0f}%" for m in a["milestones"]) + " → 앞서 받은 돈은 그때 환율로 확정",
+              "loss_prob": loss_with(a["costs"], a["milestones"], 0.0)}]
+    if hedge > 0:
+        steps.append({"key": "hedge", "label": f"헤지 {hedge * 100:.0f}% 반영", "detail": "받을 달러 일부를 입찰 환율로 고정", "loss_prob": _r(loss_now)})
 
     prof_ship = (q_now * R - bep * C) * eok                                 # 척당 이익 (억 원, 시뮬레이션별)
     cost_total = bep * eok
@@ -254,7 +270,9 @@ def evaluate(be, bid_id: str, assumptions: Optional[dict] = None) -> dict:
              "profit_ship_p90": _r(np.percentile(prof_ship, 90), 0),
              "profit_total_mean": _r(prof_ship.mean() * ship["num_ships"], 0),
              "safe_quote_krw": _r(safe * eok, 0) if safe is not None else None}
+    from .chat import verdict_parts                              # 결론 한 줄: 반사실 화면과 같은 기준 (순환 import 를 피해 여기서)
     return {"source": be.source, "bid_id": bid_id, "ship": ship, "assumptions": a, "notes": notes,
-            "summary": summary, "grid": grid, "money": money, "simple": simple,
+            "summary": summary, "grid": grid, "money": money, "simple": simple, "steps": steps,
+            "verdict": verdict_parts({**summary, "loss_prob_now": loss_now}),
             "decision": {"target": target, "ok_now": loss_now <= target, "raise": raise_opt, "hedge": hedge_opt},
             "backtest": _backtest(be.mm, months)}
